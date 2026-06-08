@@ -46,7 +46,7 @@ Tagline: "Your wingman for cleaner raid parses."
 ## Milestones
 
 1. Complete: addon skeleton, TOC, namespace, saved variables, and slash commands.
-2. Complete: movable/lockable UI frame and `/pb test` fake rows.
+2. Complete: movable/lockable/scalable UI frame and `/pb test` fake rows.
 3. Debuff library and deterministic group evaluator.
 4. Encounter detection and boss GUID tracking.
 5. CLEU aura tracking for the six MVP debuff groups.

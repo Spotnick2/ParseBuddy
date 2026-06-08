@@ -10,11 +10,13 @@ local function trim(value)
 end
 
 local function showHelp()
-    PB:Print("Commands: /pb help, test, lock, unlock, reset, debug")
+    PB:Print("Commands: /pb help, test, lock, unlock, reset, scale [0.8-1.4], debug")
 end
 
 function PB:HandleSlashCommand(message)
-    local command = trim(message):lower()
+    local input = trim(message):lower()
+    local command, argument = input:match("^(%S+)%s*(.-)$")
+    command = command or ""
 
     if command == "" or command == "help" then
         showHelp()
@@ -26,6 +28,8 @@ function PB:HandleSlashCommand(message)
         PB.UI:Unlock()
     elseif command == "reset" then
         PB.UI:ResetPosition()
+    elseif command == "scale" then
+        PB.UI:SetScale(argument)
     elseif command == "debug" then
         ParseBuddyDB.debug = not ParseBuddyDB.debug
         PB:Print("Debug output " .. (ParseBuddyDB.debug and "enabled." or "disabled."))

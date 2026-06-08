@@ -33,6 +33,8 @@ Milestone 2 provides a movable test frame with deterministic preview rows. Comba
 - `/pb lock`: lock the frame position
 - `/pb unlock`: allow the frame to be dragged
 - `/pb reset`: reset the frame to screen center
+- `/pb scale`: show the current frame scale
+- `/pb scale 0.8` through `/pb scale 1.4`: resize and persist the frame scale
 - `/pb debug`: toggle persisted debug output
 
 ## Development Milestones
@@ -63,6 +65,7 @@ Milestone 2 provides a movable test frame with deterministic preview rows. Comba
 - `/pb lock` prevents dragging and `/pb unlock` restores it.
 - Frame position and lock state persist after `/reload`.
 - `/pb reset` returns the frame to screen center.
+- `/pb scale 0.8` and `/pb scale 1.4` resize the frame and persist after `/reload`.
 - The close button hides the test frame.
 
 Encounter handling, combat events, boss tracking, aura scanning, and real debuff evaluation are intentionally not implemented yet.

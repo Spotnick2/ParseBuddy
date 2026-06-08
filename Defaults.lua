@@ -6,6 +6,7 @@ PB.Defaults = {
         debug = false,
         frame = {
             locked = false,
+            scale = 1,
             point = "CENTER",
             relativePoint = "CENTER",
             x = 0,

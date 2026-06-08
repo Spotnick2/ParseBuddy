@@ -7,6 +7,8 @@ local HEADER_HEIGHT = 54
 local ROW_HEIGHT = 44
 local ROW_SPACING = 4
 local FRAME_PADDING = 10
+local MIN_SCALE = 0.8
+local MAX_SCALE = 1.4
 
 local STATE_COLORS = {
     active = { 0.08, 0.42, 0.12, 0.92 },
@@ -196,6 +198,16 @@ function PB.UI:ApplySavedPosition()
     frame:SetPoint(position.point, UIParent, position.relativePoint, position.x, position.y)
 end
 
+function PB.UI:ApplySavedScale()
+    local frame = self:CreateFrame()
+    local scale = tonumber(ParseBuddyDB.frame.scale) or 1
+    if scale < MIN_SCALE or scale > MAX_SCALE then
+        scale = 1
+        ParseBuddyDB.frame.scale = scale
+    end
+    frame:SetScale(scale)
+end
+
 function PB.UI:UpdateLockDisplay()
     if not self.frame then
         return
@@ -208,8 +220,26 @@ end
 function PB.UI:Initialize()
     self:CreateFrame()
     self:ApplySavedPosition()
+    self:ApplySavedScale()
     self:UpdateLockDisplay()
     self.frame:Hide()
+end
+
+function PB.UI:SetScale(value)
+    if value == nil or value == "" then
+        PB:Print(string.format("Frame scale: %.2f", ParseBuddyDB.frame.scale))
+        return
+    end
+
+    local scale = tonumber(value)
+    if not scale or scale < MIN_SCALE or scale > MAX_SCALE then
+        PB:Print(string.format("Scale must be between %.1f and %.1f.", MIN_SCALE, MAX_SCALE))
+        return
+    end
+
+    ParseBuddyDB.frame.scale = scale
+    self:ApplySavedScale()
+    PB:Print(string.format("Frame scale set to %.2f.", scale))
 end
 
 function PB.UI:ShowTestMode()
