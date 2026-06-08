@@ -25,7 +25,7 @@ Equivalent effects will share one row. For example, Sunder Armor and Expose Armo
 
 ## Commands
 
-Milestone 3 provides a static debuff library and deterministic group evaluator. `/pb test` renders evaluator output from fake candidate state; combat data is not connected yet.
+Milestones 4 and 5 add encounter lifecycle, visible boss tracking, and CLEU-driven live debuff rows. Missing groups remain gray during the pull grace period and turn red afterward. Active effects update immediately from combat-log aura events. `/pb test` remains available.
 
 - `/pb` or `/parsebuddy`: show help
 - `/pb help`: show help
@@ -41,9 +41,9 @@ Milestone 3 provides a static debuff library and deterministic group evaluator. 
 
 1. Addon skeleton, TOC, namespace, saved variables, and slash commands
 2. Movable/lockable UI frame and deterministic `/pb test` rows
-3. **Current:** debuff library and deterministic group evaluator
+3. Debuff library and deterministic group evaluator
 4. Encounter detection and boss GUID tracking
-5. CLEU aura tracking for six MVP groups
+5. **Current:** CLEU aura tracking for six MVP groups
 6. Opportunistic boss aura resync and timer expiration
 7. Debug tools, polish, and in-game acceptance testing
 
@@ -55,7 +55,7 @@ Milestone 3 provides a static debuff library and deterministic group evaluator. 
 - Assignments or import/export
 - External addon or framework dependencies
 
-## Milestone 3 In-Game Checks
+## Milestones 4-5 In-Game Checks
 
 - ParseBuddy appears in the addon list.
 - The addon loads without Lua errors.
@@ -68,7 +68,12 @@ Milestone 3 provides a static debuff library and deterministic group evaluator. 
 - `/pb scale 0.8` and `/pb scale 1.4` resize the frame and persist after `/reload`.
 - The close button hides the test frame.
 - `/pb test` still shows the same six scenarios after the data/evaluator refactor.
+- Starting a supported encounter shows the primary visible boss and all six live group rows.
+- Missing groups are gray during pull grace and red afterward.
+- Applying, refreshing, stacking, or removing a tracked boss debuff updates its group row immediately.
+- A boss disappearing from `boss1` through `boss5` is hidden from the display without ending the encounter state.
+- Encounter end hides the encounter frame.
 
-Encounter handling, combat events, boss tracking, aura scanning, and real debuff evaluation are intentionally not implemented yet.
+Boss aura scanning, duration recovery, repeating timer refreshes, and known-duration expiration are intentionally not implemented yet.
 
 For local development, verified runtime files may be deployed directly to the TBC Anniversary `Interface\\AddOns\\ParseBuddy` directory. Reload the UI after Lua, TOC, or UI changes.

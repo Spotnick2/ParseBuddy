@@ -1,6 +1,8 @@
 local PB = ParseBuddy
 
-PB.State = {}
+PB.State = {
+    candidatesByBoss = {},
+}
 
 local STATE_RANK = {
     activeKnown = 1,
@@ -165,4 +167,84 @@ function PB.State:CreateTestEvaluations()
         attackPower = { enabled = false },
     }
     return self:EvaluateGroups(candidates, options, { now = now, warningThreshold = 5 })
+end
+
+function PB.State:ResetEncounter()
+    self.candidatesByBoss = {}
+end
+
+function PB.State:GetBossCandidates(bossGUID)
+    local bossCandidates = self.candidatesByBoss[bossGUID]
+    if not bossCandidates then
+        bossCandidates = {}
+        self.candidatesByBoss[bossGUID] = bossCandidates
+    end
+    return bossCandidates
+end
+
+function PB.State:HandleAuraEvent(event)
+    local groupKey = PB.DebuffLibrary.spellIdToGroupKey[event.spellId]
+    if not groupKey then
+        return false
+    end
+
+    local bossCandidates = self:GetBossCandidates(event.destGUID)
+    local groupCandidates = bossCandidates[groupKey]
+    if not groupCandidates then
+        groupCandidates = {}
+        bossCandidates[groupKey] = groupCandidates
+    end
+
+    if event.subevent == "SPELL_AURA_REMOVED" then
+        groupCandidates[event.spellId] = nil
+        return true
+    end
+
+    local candidate = groupCandidates[event.spellId] or {}
+    candidate.spellId = event.spellId
+    candidate.spellName = event.spellName
+    candidate.sourceName = event.sourceName
+    candidate.sourceGUID = event.sourceGUID
+    candidate.destGUID = event.destGUID
+    candidate.active = true
+    candidate.removedAt = nil
+    candidate.lastSeenAt = event.timestamp
+
+    if event.subevent == "SPELL_AURA_APPLIED_DOSE" or event.subevent == "SPELL_AURA_REMOVED_DOSE" then
+        candidate.stacks = event.amount or candidate.stacks or 1
+    elseif not candidate.stacks then
+        candidate.stacks = 1
+    end
+
+    groupCandidates[event.spellId] = candidate
+    return true
+end
+
+local function candidatesAsArray(candidatesBySpell)
+    local candidates = {}
+    local _, candidate
+    for _, candidate in pairs(candidatesBySpell or {}) do
+        candidates[#candidates + 1] = candidate
+    end
+    return candidates
+end
+
+function PB.State:EvaluateBoss(bossGUID, now, warningThreshold, graceActive)
+    local bossCandidates = self.candidatesByBoss[bossGUID] or {}
+    local evaluations = {}
+    local index
+
+    for index, group in ipairs(PB.DebuffLibrary.groups) do
+        local evaluation = self:EvaluateGroup(
+            group,
+            candidatesAsArray(bossCandidates[group.key]),
+            { now = now, warningThreshold = warningThreshold }
+        )
+        if graceActive and evaluation.state == "missing" then
+            evaluation.state = "grace"
+        end
+        evaluations[index] = evaluation
+    end
+
+    return evaluations
 end

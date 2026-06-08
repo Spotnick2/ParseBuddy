@@ -48,8 +48,8 @@ Tagline: "Your wingman for cleaner raid parses."
 1. Complete: addon skeleton, TOC, namespace, saved variables, and slash commands.
 2. Complete: movable/lockable/scalable UI frame and `/pb test` fake rows.
 3. Complete: debuff library and deterministic group evaluator.
-4. Encounter detection and boss GUID tracking.
-5. CLEU aura tracking for the six MVP debuff groups.
+4. Complete: encounter detection and boss GUID tracking.
+5. Complete: CLEU aura tracking for the six MVP debuff groups.
 6. Opportunistic boss aura resync and timer expiration.
 7. Debug tools, polish, and in-game acceptance testing.
 

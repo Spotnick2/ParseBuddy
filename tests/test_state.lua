@@ -88,4 +88,47 @@ result = evaluate("majorArmor", {
 })
 assertEqual(result.candidate.sourceGUID, "A", "source GUID breaks final tie")
 
+State:ResetEncounter()
+assertEqual(State:HandleAuraEvent({
+    timestamp = 100,
+    subevent = "SPELL_AURA_APPLIED",
+    sourceGUID = "Player-A",
+    sourceName = "Tank",
+    destGUID = "Boss-A",
+    spellId = 25225,
+    spellName = "Sunder Armor",
+}), true, "runtime apply accepted")
+
+local live = State:EvaluateBoss("Boss-A", 100, 5, false)
+assertEqual(live[2].state, "partial", "initial Sunder is partial")
+assertEqual(live[2].candidate.stacks, 1, "initial aura stack defaults to one")
+
+State:HandleAuraEvent({
+    timestamp = 101,
+    subevent = "SPELL_AURA_APPLIED_DOSE",
+    sourceGUID = "Player-A",
+    sourceName = "Tank",
+    destGUID = "Boss-A",
+    spellId = 25225,
+    spellName = "Sunder Armor",
+    amount = 5,
+})
+live = State:EvaluateBoss("Boss-A", 101, 5, false)
+assertEqual(live[2].state, "active", "five live Sunder stacks satisfy Armor")
+
+State:HandleAuraEvent({
+    timestamp = 102,
+    subevent = "SPELL_AURA_REMOVED",
+    sourceGUID = "Player-A",
+    sourceName = "Tank",
+    destGUID = "Boss-A",
+    spellId = 25225,
+    spellName = "Sunder Armor",
+})
+live = State:EvaluateBoss("Boss-A", 102, 5, false)
+assertEqual(live[2].state, "missing", "live removal clears candidate")
+
+live = State:EvaluateBoss("Boss-B", 102, 5, true)
+assertEqual(live[1].state, "grace", "missing group is neutral during grace")
+
 print("ParseBuddy State tests passed: " .. testsRun)

@@ -7,6 +7,7 @@ local HEADER_HEIGHT = 54
 local ROW_HEIGHT = 44
 local ROW_SPACING = 4
 local FRAME_PADDING = 10
+local COLLAPSED_FRAME_HEIGHT = HEADER_HEIGHT + FRAME_PADDING
 local MIN_SCALE = 0.8
 local MAX_SCALE = 1.4
 
@@ -15,6 +16,7 @@ local STATE_COLORS = {
     warning = { 0.48, 0.38, 0.04, 0.92 },
     missing = { 0.50, 0.07, 0.07, 0.92 },
     disabled = { 0.20, 0.20, 0.20, 0.92 },
+    grace = { 0.20, 0.20, 0.20, 0.92 },
 }
 
 local function createBackdrop(frame, color)
@@ -116,6 +118,9 @@ local function evaluationToRowData(evaluation)
     if state == "disabled" then
         effect = group.missingText
         status = "DISABLED"
+    elseif state == "grace" then
+        effect = group.missingText .. " pending"
+        status = "GRACE"
     elseif state == "missing" then
         effect = group.missingText .. " missing"
         status = "MISSING"
@@ -213,6 +218,17 @@ function PB.UI:UpdateLockDisplay()
     self.frame.title:SetText("ParseBuddy" .. suffix)
 end
 
+function PB.UI:SetRowsVisible(visible)
+    local index
+    for index = 1, #self.frame.rows do
+        if visible then
+            self.frame.rows[index]:Show()
+        else
+            self.frame.rows[index]:Hide()
+        end
+    end
+end
+
 function PB.UI:Initialize()
     self:CreateFrame()
     self:ApplySavedPosition()
@@ -245,8 +261,54 @@ function PB.UI:ShowTestMode()
     for index = 1, #evaluations do
         setRowData(frame.rows[index], evaluationToRowData(evaluations[index]))
     end
+    self.mode = "test"
+    frame.subtitle:SetText("Test Boss - deterministic preview")
+    frame:SetHeight(HEADER_HEIGHT + (#evaluations * (ROW_HEIGHT + ROW_SPACING)) + FRAME_PADDING)
+    self:SetRowsVisible(true)
     self:UpdateLockDisplay()
     frame:Show()
+end
+
+function PB.UI:ShowEncounter(encounter, primaryBoss)
+    local frame = self:CreateFrame()
+    self.mode = "encounter"
+    self:UpdateEncounter(encounter, primaryBoss)
+    self:UpdateLockDisplay()
+    frame:Show()
+end
+
+function PB.UI:UpdateEncounter(encounter, primaryBoss, evaluations)
+    if self.mode ~= "encounter" or not self.frame then
+        return
+    end
+
+    if primaryBoss then
+        self.frame.subtitle:SetText(primaryBoss.name)
+    elseif encounter then
+        self.frame.subtitle:SetText((encounter.name or "Encounter") .. " - waiting for visible boss")
+    else
+        self.frame.subtitle:SetText("Waiting for visible boss")
+    end
+
+    if not primaryBoss or not evaluations then
+        self:SetRowsVisible(false)
+        self.frame:SetHeight(COLLAPSED_FRAME_HEIGHT)
+        return
+    end
+
+    local index
+    for index = 1, #evaluations do
+        setRowData(self.frame.rows[index], evaluationToRowData(evaluations[index]))
+    end
+    self:SetRowsVisible(true)
+    self.frame:SetHeight(HEADER_HEIGHT + (#evaluations * (ROW_HEIGHT + ROW_SPACING)) + FRAME_PADDING)
+end
+
+function PB.UI:HideEncounter()
+    if self.mode == "encounter" and self.frame then
+        self.frame:Hide()
+        self.mode = nil
+    end
 end
 
 function PB.UI:Lock()

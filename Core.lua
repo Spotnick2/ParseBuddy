@@ -56,6 +56,7 @@ function PB:Initialize()
 
     registerSlashCommands()
     PB.UI:Initialize()
+    PB.Events:Initialize()
     PB:Debug("Initialized version " .. PB.version)
 end
 
