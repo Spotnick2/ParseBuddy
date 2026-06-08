@@ -47,7 +47,7 @@ Tagline: "Your wingman for cleaner raid parses."
 
 1. Complete: addon skeleton, TOC, namespace, saved variables, and slash commands.
 2. Complete: movable/lockable/scalable UI frame and `/pb test` fake rows.
-3. Debuff library and deterministic group evaluator.
+3. Complete: debuff library and deterministic group evaluator.
 4. Encounter detection and boss GUID tracking.
 5. CLEU aura tracking for the six MVP debuff groups.
 6. Opportunistic boss aura resync and timer expiration.

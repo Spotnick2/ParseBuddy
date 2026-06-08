@@ -17,57 +17,6 @@ local STATE_COLORS = {
     disabled = { 0.20, 0.20, 0.20, 0.92 },
 }
 
-local TEST_ROWS = {
-    {
-        iconSpellId = 27228,
-        group = "Spell Vulnerability",
-        effect = "CoE",
-        source = "Drakuzo",
-        status = "04:52",
-        state = "active",
-    },
-    {
-        iconSpellId = 25225,
-        group = "Armor",
-        effect = "Sunder 5/5",
-        source = "Tankname",
-        status = "00:24",
-        state = "active",
-    },
-    {
-        iconSpellId = 26993,
-        group = "Faerie Fire",
-        effect = "Faerie Fire",
-        source = "Druidname",
-        status = "00:04",
-        state = "warning",
-    },
-    {
-        iconSpellId = 27164,
-        group = "Judgement",
-        effect = "Wisdom / Light missing",
-        source = "",
-        status = "MISSING",
-        state = "missing",
-    },
-    {
-        iconSpellId = 25203,
-        group = "Attack Power",
-        effect = "Demo Shout / Roar",
-        source = "Optional",
-        status = "DISABLED",
-        state = "disabled",
-    },
-    {
-        iconSpellId = 25264,
-        group = "Attack Speed",
-        effect = "Thunder Clap",
-        source = "Tankname",
-        status = "00:18",
-        state = "active",
-    },
-}
-
 local function createBackdrop(frame, color)
     if not frame.SetBackdrop then
         return
@@ -146,6 +95,52 @@ local function setRowData(row, data)
     row.statusText:SetText(data.status)
 end
 
+local function formatDuration(remaining)
+    local seconds = math.max(0, math.floor((remaining or 0) + 0.5))
+    return string.format("%02d:%02d", math.floor(seconds / 60), seconds % 60)
+end
+
+local function getDefaultIconSpellId(group)
+    return group.spells[1].spellIds[#group.spells[1].spellIds]
+end
+
+local function evaluationToRowData(evaluation)
+    local group = evaluation.group
+    local candidate = evaluation.candidate
+    local spell = evaluation.spell
+    local state = evaluation.state
+    local effect
+    local status
+    local displayState = state
+
+    if state == "disabled" then
+        effect = group.missingText
+        status = "DISABLED"
+    elseif state == "missing" then
+        effect = group.missingText .. " missing"
+        status = "MISSING"
+    else
+        effect = spell.displayName
+        if spell.requiredStacks then
+            effect = effect .. " " .. tostring(candidate.stacks or 0) .. "/" .. tostring(spell.requiredStacks)
+        end
+        status = evaluation.remaining and formatDuration(evaluation.remaining) or "ACTIVE"
+    end
+
+    if state == "expiring" or state == "partial" or (state == "active" and not evaluation.sourceKnown) then
+        displayState = "warning"
+    end
+
+    return {
+        iconSpellId = candidate and candidate.spellId or getDefaultIconSpellId(group),
+        group = group.label,
+        effect = effect,
+        source = candidate and candidate.sourceName or "",
+        status = status,
+        state = displayState,
+    }
+end
+
 function PB.UI:CreateFrame()
     if self.frame then
         return self.frame
@@ -153,7 +148,8 @@ function PB.UI:CreateFrame()
 
     local template = BackdropTemplateMixin and "BackdropTemplate" or nil
     local frame = CreateFrame("Frame", "ParseBuddyFrame", UIParent, template)
-    frame:SetSize(FRAME_WIDTH, HEADER_HEIGHT + (#TEST_ROWS * (ROW_HEIGHT + ROW_SPACING)) + FRAME_PADDING)
+    local rowCount = #PB.DebuffLibrary.groups
+    frame:SetSize(FRAME_WIDTH, HEADER_HEIGHT + (rowCount * (ROW_HEIGHT + ROW_SPACING)) + FRAME_PADDING)
     frame:SetClampedToScreen(true)
     frame:SetMovable(true)
     frame:EnableMouse(true)
@@ -173,7 +169,7 @@ function PB.UI:CreateFrame()
 
     frame.rows = {}
     local index
-    for index = 1, #TEST_ROWS do
+    for index = 1, rowCount do
         frame.rows[index] = createRow(frame, index)
     end
 
@@ -244,9 +240,10 @@ end
 
 function PB.UI:ShowTestMode()
     local frame = self:CreateFrame()
+    local evaluations = PB.State:CreateTestEvaluations()
     local index
-    for index = 1, #TEST_ROWS do
-        setRowData(frame.rows[index], TEST_ROWS[index])
+    for index = 1, #evaluations do
+        setRowData(frame.rows[index], evaluationToRowData(evaluations[index]))
     end
     self:UpdateLockDisplay()
     frame:Show()

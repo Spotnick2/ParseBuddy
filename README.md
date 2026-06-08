@@ -25,7 +25,7 @@ Equivalent effects will share one row. For example, Sunder Armor and Expose Armo
 
 ## Commands
 
-Milestone 2 provides a movable test frame with deterministic preview rows. Combat data is not connected yet.
+Milestone 3 provides a static debuff library and deterministic group evaluator. `/pb test` renders evaluator output from fake candidate state; combat data is not connected yet.
 
 - `/pb` or `/parsebuddy`: show help
 - `/pb help`: show help
@@ -40,8 +40,8 @@ Milestone 2 provides a movable test frame with deterministic preview rows. Comba
 ## Development Milestones
 
 1. Addon skeleton, TOC, namespace, saved variables, and slash commands
-2. **Current:** movable/lockable UI frame and deterministic `/pb test` rows
-3. Debuff library and deterministic group evaluator
+2. Movable/lockable UI frame and deterministic `/pb test` rows
+3. **Current:** debuff library and deterministic group evaluator
 4. Encounter detection and boss GUID tracking
 5. CLEU aura tracking for six MVP groups
 6. Opportunistic boss aura resync and timer expiration
@@ -55,7 +55,7 @@ Milestone 2 provides a movable test frame with deterministic preview rows. Comba
 - Assignments or import/export
 - External addon or framework dependencies
 
-## Milestone 2 In-Game Checks
+## Milestone 3 In-Game Checks
 
 - ParseBuddy appears in the addon list.
 - The addon loads without Lua errors.
@@ -67,6 +67,7 @@ Milestone 2 provides a movable test frame with deterministic preview rows. Comba
 - `/pb reset` returns the frame to screen center at scale `1.00`.
 - `/pb scale 0.8` and `/pb scale 1.4` resize the frame and persist after `/reload`.
 - The close button hides the test frame.
+- `/pb test` still shows the same six scenarios after the data/evaluator refactor.
 
 Encounter handling, combat events, boss tracking, aura scanning, and real debuff evaluation are intentionally not implemented yet.
 
