@@ -25,20 +25,20 @@ Equivalent effects will share one row. For example, Sunder Armor and Expose Armo
 
 ## Commands
 
-Milestone 1 provides the command shell; UI commands are placeholders until Milestone 2.
+Milestone 2 provides a movable test frame with deterministic preview rows. Combat data is not connected yet.
 
 - `/pb` or `/parsebuddy`: show help
 - `/pb help`: show help
-- `/pb test`: placeholder for test mode
-- `/pb lock`: placeholder for locking the frame
-- `/pb unlock`: placeholder for unlocking the frame
-- `/pb reset`: placeholder for resetting frame position
+- `/pb test`: show the deterministic test frame
+- `/pb lock`: lock the frame position
+- `/pb unlock`: allow the frame to be dragged
+- `/pb reset`: reset the frame to screen center
 - `/pb debug`: toggle persisted debug output
 
 ## Development Milestones
 
-1. **Current:** addon skeleton, TOC, namespace, saved variables, and slash commands
-2. Movable/lockable UI frame and deterministic `/pb test` rows
+1. Addon skeleton, TOC, namespace, saved variables, and slash commands
+2. **Current:** movable/lockable UI frame and deterministic `/pb test` rows
 3. Debuff library and deterministic group evaluator
 4. Encounter detection and boss GUID tracking
 5. CLEU aura tracking for six MVP groups
@@ -53,13 +53,18 @@ Milestone 1 provides the command shell; UI commands are placeholders until Miles
 - Assignments or import/export
 - External addon or framework dependencies
 
-## Milestone 1 In-Game Checks
+## Milestone 2 In-Game Checks
 
 - ParseBuddy appears in the addon list.
 - The addon loads without Lua errors.
 - `/pb` and `/parsebuddy` both show help.
-- `ParseBuddyDB` is created in account-wide saved variables.
-- `/pb debug` persists its value after `/reload`.
-- Test, lock, unlock, and reset commands print clear placeholder messages.
+- `/pb test` shows six green, yellow, red, and gray preview rows.
+- The frame can be dragged while unlocked.
+- `/pb lock` prevents dragging and `/pb unlock` restores it.
+- Frame position and lock state persist after `/reload`.
+- `/pb reset` returns the frame to screen center.
+- The close button hides the test frame.
 
-The frame, fake rows, encounter handling, and combat features are intentionally not implemented yet.
+Encounter handling, combat events, boss tracking, aura scanning, and real debuff evaluation are intentionally not implemented yet.
+
+For local development, verified runtime files may be deployed directly to the TBC Anniversary `Interface\\AddOns\\ParseBuddy` directory. Reload the UI after Lua, TOC, or UI changes.

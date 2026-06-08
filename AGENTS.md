@@ -38,11 +38,15 @@ Tagline: "Your wingman for cleaner raid parses."
 - Keep the current behavior and milestone status in documentation accurate.
 - Do not silently change established project rules.
 - Keep `Reference/` local and untracked. It contains research material, not ParseBuddy source.
+- After successful verification, deploy the addon when useful to `C:\Program Files (x86)\World of Warcraft\_anniversary_\Interface\AddOns\ParseBuddy`.
+- Deploy runtime files only: `ParseBuddy.toc` and the Lua files listed by the TOC. Do not deploy documentation, tests, Git metadata, references, logs, or scratch files.
+- Preserve the same relative paths used by the TOC when future runtime subdirectories are added.
+- After deployment, tell the user whether `/reload` is sufficient or whether a logout/client restart is required. Lua, TOC, and ordinary UI changes normally require `/reload`; testing saved variables written at logout may require logging out and back in.
 
 ## Milestones
 
-1. Addon skeleton, TOC, namespace, saved variables, and slash commands.
-2. Movable/lockable UI frame and `/pb test` fake rows.
+1. Complete: addon skeleton, TOC, namespace, saved variables, and slash commands.
+2. Complete: movable/lockable UI frame and `/pb test` fake rows.
 3. Debuff library and deterministic group evaluator.
 4. Encounter detection and boss GUID tracking.
 5. CLEU aura tracking for the six MVP debuff groups.

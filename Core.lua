@@ -51,6 +51,7 @@ function PB:Initialize()
     PB.version = getMetadata and getMetadata(PB.addonName, "Version") or "unknown"
 
     registerSlashCommands()
+    PB.UI:Initialize()
     PB:Debug("Initialized version " .. PB.version)
 end
 

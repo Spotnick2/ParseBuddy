@@ -4,7 +4,7 @@
 ## Title: ParseBuddy
 ## Notes: Your wingman for cleaner raid parses.
 ## Author: TODO
-## Version: 0.1.1.0
+## Version: 0.1.2.0
 ## SavedVariables: ParseBuddyDB
 
 Core.lua

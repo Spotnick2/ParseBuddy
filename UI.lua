@@ -2,18 +2,243 @@ local PB = ParseBuddy
 
 PB.UI = {}
 
+local FRAME_WIDTH = 560
+local HEADER_HEIGHT = 54
+local ROW_HEIGHT = 44
+local ROW_SPACING = 4
+local FRAME_PADDING = 10
+
+local STATE_COLORS = {
+    active = { 0.08, 0.42, 0.12, 0.92 },
+    warning = { 0.48, 0.38, 0.04, 0.92 },
+    missing = { 0.50, 0.07, 0.07, 0.92 },
+    disabled = { 0.20, 0.20, 0.20, 0.92 },
+}
+
+local TEST_ROWS = {
+    {
+        iconSpellId = 27228,
+        group = "Spell Vulnerability",
+        effect = "CoE",
+        source = "Drakuzo",
+        status = "04:52",
+        state = "active",
+    },
+    {
+        iconSpellId = 25225,
+        group = "Armor",
+        effect = "Sunder 5/5",
+        source = "Tankname",
+        status = "00:24",
+        state = "active",
+    },
+    {
+        iconSpellId = 26993,
+        group = "Faerie Fire",
+        effect = "Faerie Fire",
+        source = "Druidname",
+        status = "00:04",
+        state = "warning",
+    },
+    {
+        iconSpellId = 27164,
+        group = "Judgement",
+        effect = "Wisdom / Light missing",
+        source = "",
+        status = "MISSING",
+        state = "missing",
+    },
+    {
+        iconSpellId = 25203,
+        group = "Attack Power",
+        effect = "Demo Shout / Roar",
+        source = "Optional",
+        status = "DISABLED",
+        state = "disabled",
+    },
+    {
+        iconSpellId = 25264,
+        group = "Attack Speed",
+        effect = "Thunder Clap",
+        source = "Tankname",
+        status = "00:18",
+        state = "active",
+    },
+}
+
+local function createBackdrop(frame, color)
+    if not frame.SetBackdrop then
+        return
+    end
+
+    frame:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        edgeSize = 12,
+        insets = { left = 3, right = 3, top = 3, bottom = 3 },
+    })
+    frame:SetBackdropColor(color[1], color[2], color[3], color[4])
+    frame:SetBackdropBorderColor(0.45, 0.45, 0.45, 1)
+end
+
+local function getIcon(spellId)
+    if C_Spell and C_Spell.GetSpellTexture then
+        return C_Spell.GetSpellTexture(spellId)
+    end
+    if GetSpellTexture then
+        return GetSpellTexture(spellId)
+    end
+    return "Interface\\Icons\\INV_Misc_QuestionMark"
+end
+
+local function saveFramePosition(frame)
+    local point, _, relativePoint, x, y = frame:GetPoint(1)
+    ParseBuddyDB.frame.point = point or "CENTER"
+    ParseBuddyDB.frame.relativePoint = relativePoint or point or "CENTER"
+    ParseBuddyDB.frame.x = x or 0
+    ParseBuddyDB.frame.y = y or 0
+end
+
+local function createRow(parent, index)
+    local template = BackdropTemplateMixin and "BackdropTemplate" or nil
+    local row = CreateFrame("Frame", nil, parent, template)
+    row:SetHeight(ROW_HEIGHT)
+    row:SetPoint("TOPLEFT", FRAME_PADDING, -HEADER_HEIGHT - ((index - 1) * (ROW_HEIGHT + ROW_SPACING)))
+    row:SetPoint("TOPRIGHT", -FRAME_PADDING, -HEADER_HEIGHT - ((index - 1) * (ROW_HEIGHT + ROW_SPACING)))
+
+    row.icon = row:CreateTexture(nil, "ARTWORK")
+    row.icon:SetSize(34, 34)
+    row.icon:SetPoint("LEFT", 5, 0)
+    row.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+
+    row.groupText = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    row.groupText:SetPoint("LEFT", row.icon, "RIGHT", 8, 9)
+    row.groupText:SetWidth(140)
+    row.groupText:SetJustifyH("LEFT")
+
+    row.effectText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    row.effectText:SetPoint("LEFT", row.icon, "RIGHT", 8, -9)
+    row.effectText:SetWidth(205)
+    row.effectText:SetJustifyH("LEFT")
+
+    row.sourceText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.sourceText:SetPoint("LEFT", row, "LEFT", 390, 0)
+    row.sourceText:SetWidth(92)
+    row.sourceText:SetJustifyH("LEFT")
+
+    row.statusText = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    row.statusText:SetPoint("RIGHT", -8, 0)
+    row.statusText:SetWidth(70)
+    row.statusText:SetJustifyH("RIGHT")
+
+    return row
+end
+
+local function setRowData(row, data)
+    local color = STATE_COLORS[data.state] or STATE_COLORS.disabled
+    createBackdrop(row, color)
+    row.icon:SetTexture(getIcon(data.iconSpellId))
+    row.groupText:SetText(data.group)
+    row.effectText:SetText(data.effect)
+    row.sourceText:SetText(data.source)
+    row.statusText:SetText(data.status)
+end
+
+function PB.UI:CreateFrame()
+    if self.frame then
+        return self.frame
+    end
+
+    local template = BackdropTemplateMixin and "BackdropTemplate" or nil
+    local frame = CreateFrame("Frame", "ParseBuddyFrame", UIParent, template)
+    frame:SetSize(FRAME_WIDTH, HEADER_HEIGHT + (#TEST_ROWS * (ROW_HEIGHT + ROW_SPACING)) + FRAME_PADDING)
+    frame:SetClampedToScreen(true)
+    frame:SetMovable(true)
+    frame:EnableMouse(true)
+    frame:RegisterForDrag("LeftButton")
+    createBackdrop(frame, { 0.035, 0.035, 0.04, 0.96 })
+
+    frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    frame.title:SetPoint("TOPLEFT", 14, -11)
+    frame.title:SetText("ParseBuddy")
+
+    frame.subtitle = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    frame.subtitle:SetPoint("TOPLEFT", frame.title, "BOTTOMLEFT", 0, -3)
+    frame.subtitle:SetText("Test Boss - deterministic preview")
+
+    frame.closeButton = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
+    frame.closeButton:SetPoint("TOPRIGHT", -3, -3)
+
+    frame.rows = {}
+    local index
+    for index = 1, #TEST_ROWS do
+        frame.rows[index] = createRow(frame, index)
+    end
+
+    frame:SetScript("OnDragStart", function(currentFrame)
+        if not ParseBuddyDB.frame.locked then
+            currentFrame:StartMoving()
+        end
+    end)
+    frame:SetScript("OnDragStop", function(currentFrame)
+        currentFrame:StopMovingOrSizing()
+        saveFramePosition(currentFrame)
+    end)
+
+    self.frame = frame
+    return frame
+end
+
+function PB.UI:ApplySavedPosition()
+    local frame = self:CreateFrame()
+    local position = ParseBuddyDB.frame
+    frame:ClearAllPoints()
+    frame:SetPoint(position.point, UIParent, position.relativePoint, position.x, position.y)
+end
+
+function PB.UI:UpdateLockDisplay()
+    if not self.frame then
+        return
+    end
+
+    local suffix = ParseBuddyDB.frame.locked and " |cffaaaaaa[Locked]|r" or " |cff66ff66[Unlocked]|r"
+    self.frame.title:SetText("ParseBuddy" .. suffix)
+end
+
+function PB.UI:Initialize()
+    self:CreateFrame()
+    self:ApplySavedPosition()
+    self:UpdateLockDisplay()
+    self.frame:Hide()
+end
+
 function PB.UI:ShowTestMode()
-    PB:Print("Test mode is not implemented until Milestone 2.")
+    local frame = self:CreateFrame()
+    local index
+    for index = 1, #TEST_ROWS do
+        setRowData(frame.rows[index], TEST_ROWS[index])
+    end
+    self:UpdateLockDisplay()
+    frame:Show()
 end
 
 function PB.UI:Lock()
-    PB:Print("Frame locking is not implemented until Milestone 2.")
+    ParseBuddyDB.frame.locked = true
+    self:UpdateLockDisplay()
+    PB:Print("Frame locked.")
 end
 
 function PB.UI:Unlock()
-    PB:Print("Frame unlocking is not implemented until Milestone 2.")
+    ParseBuddyDB.frame.locked = false
+    self:UpdateLockDisplay()
+    PB:Print("Frame unlocked. Drag the title area to move it.")
 end
 
 function PB.UI:ResetPosition()
-    PB:Print("Frame position reset is not implemented until Milestone 2.")
+    ParseBuddyDB.frame.point = "CENTER"
+    ParseBuddyDB.frame.relativePoint = "CENTER"
+    ParseBuddyDB.frame.x = 0
+    ParseBuddyDB.frame.y = 0
+    self:ApplySavedPosition()
+    PB:Print("Frame position reset.")
 end
