@@ -269,6 +269,8 @@ function PB.UI:ResetPosition()
     ParseBuddyDB.frame.relativePoint = "CENTER"
     ParseBuddyDB.frame.x = 0
     ParseBuddyDB.frame.y = 0
+    ParseBuddyDB.frame.scale = 1
     self:ApplySavedPosition()
-    PB:Print("Frame position reset.")
+    self:ApplySavedScale()
+    PB:Print("Frame position and scale reset.")
 end
