@@ -34,7 +34,7 @@ Milestones 4 and 5 add encounter lifecycle, visible boss tracking, and CLEU-driv
 - `/pb unlock`: allow the frame to be dragged
 - `/pb reset`: reset the frame to screen center and scale `1.00`
 - `/pb scale`: show the current frame scale
-- `/pb scale 0.8` through `/pb scale 1.4`: resize and persist the frame scale
+- `/pb scale 0.6` through `/pb scale 1.4`: resize and persist the frame scale
 - `/pb debug`: toggle persisted debug output
 
 ## Development Milestones
@@ -65,7 +65,7 @@ Milestones 4 and 5 add encounter lifecycle, visible boss tracking, and CLEU-driv
 - `/pb lock` prevents dragging and `/pb unlock` restores it.
 - Frame position and lock state persist after `/reload`.
 - `/pb reset` returns the frame to screen center at scale `1.00`.
-- `/pb scale 0.8` and `/pb scale 1.4` resize the frame and persist after `/reload`.
+- `/pb scale 0.6` and `/pb scale 1.4` resize the compact frame and persist after `/reload`.
 - The close button hides the test frame.
 - `/pb test` still shows the same six scenarios after the data/evaluator refactor.
 - Starting a supported encounter shows the primary visible boss and all six live group rows.

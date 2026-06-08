@@ -2,13 +2,13 @@ local PB = ParseBuddy
 
 PB.UI = {}
 
-local FRAME_WIDTH = 560
-local HEADER_HEIGHT = 54
-local ROW_HEIGHT = 44
-local ROW_SPACING = 4
-local FRAME_PADDING = 10
+local FRAME_WIDTH = 440
+local HEADER_HEIGHT = 42
+local ROW_HEIGHT = 32
+local ROW_SPACING = 2
+local FRAME_PADDING = 6
 local COLLAPSED_FRAME_HEIGHT = HEADER_HEIGHT + FRAME_PADDING
-local MIN_SCALE = 0.8
+local MIN_SCALE = 0.6
 local MAX_SCALE = 1.4
 
 local STATE_COLORS = {
@@ -60,28 +60,28 @@ local function createRow(parent, index)
     row:SetPoint("TOPRIGHT", -FRAME_PADDING, -HEADER_HEIGHT - ((index - 1) * (ROW_HEIGHT + ROW_SPACING)))
 
     row.icon = row:CreateTexture(nil, "ARTWORK")
-    row.icon:SetSize(34, 34)
-    row.icon:SetPoint("LEFT", 5, 0)
+    row.icon:SetSize(26, 26)
+    row.icon:SetPoint("LEFT", 4, 0)
     row.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 
     row.groupText = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    row.groupText:SetPoint("LEFT", row.icon, "RIGHT", 8, 9)
-    row.groupText:SetWidth(140)
+    row.groupText:SetPoint("LEFT", row.icon, "RIGHT", 6, 7)
+    row.groupText:SetWidth(180)
     row.groupText:SetJustifyH("LEFT")
 
     row.effectText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    row.effectText:SetPoint("LEFT", row.icon, "RIGHT", 8, -9)
-    row.effectText:SetWidth(205)
+    row.effectText:SetPoint("LEFT", row.icon, "RIGHT", 6, -7)
+    row.effectText:SetWidth(190)
     row.effectText:SetJustifyH("LEFT")
 
     row.sourceText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    row.sourceText:SetPoint("LEFT", row, "LEFT", 390, 0)
-    row.sourceText:SetWidth(92)
+    row.sourceText:SetPoint("LEFT", row, "LEFT", 292, 0)
+    row.sourceText:SetWidth(72)
     row.sourceText:SetJustifyH("LEFT")
 
     row.statusText = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    row.statusText:SetPoint("RIGHT", -8, 0)
-    row.statusText:SetWidth(70)
+    row.statusText:SetPoint("RIGHT", -6, 0)
+    row.statusText:SetWidth(62)
     row.statusText:SetJustifyH("RIGHT")
 
     return row
@@ -162,11 +162,11 @@ function PB.UI:CreateFrame()
     createBackdrop(frame, { 0.035, 0.035, 0.04, 0.96 })
 
     frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    frame.title:SetPoint("TOPLEFT", 14, -11)
+    frame.title:SetPoint("TOPLEFT", 10, -7)
     frame.title:SetText("ParseBuddy")
 
     frame.subtitle = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    frame.subtitle:SetPoint("TOPLEFT", frame.title, "BOTTOMLEFT", 0, -3)
+    frame.subtitle:SetPoint("TOPLEFT", frame.title, "BOTTOMLEFT", 0, -1)
     frame.subtitle:SetText("Test Boss - deterministic preview")
 
     frame.closeButton = CreateFrame("Button", nil, frame, "UIPanelCloseButton")

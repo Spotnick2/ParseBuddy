@@ -10,7 +10,7 @@ local function trim(value)
 end
 
 local function showHelp()
-    PB:Print("Commands: /pb help, test, lock, unlock, reset, scale [0.8-1.4], debug")
+    PB:Print("Commands: /pb help, test, lock, unlock, reset, scale [0.6-1.4], debug")
 end
 
 function PB:HandleSlashCommand(message)
