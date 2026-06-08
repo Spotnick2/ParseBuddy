@@ -1,0 +1,25 @@
+# Local reference projects and research material
+Reference/
+
+# Editors
+.vscode/
+.idea/
+*.code-workspace
+*.swp
+*.swo
+*~
+
+# Operating systems
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Packages and temporary output
+*.zip
+*.log
+*.tmp
+*.bak
+tmp/
+temp/
+.tmp/
+test-output/

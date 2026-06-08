@@ -1,0 +1,66 @@
+ParseBuddy = ParseBuddy or {}
+
+local addonName = ...
+local PB = ParseBuddy
+
+PB.addonName = addonName or "ParseBuddy"
+
+local function trim(value)
+    return (value or ""):match("^%s*(.-)%s*$")
+end
+
+local function showHelp()
+    PB:Print("Commands: /pb help, test, lock, unlock, reset, debug")
+end
+
+function PB:HandleSlashCommand(message)
+    local command = trim(message):lower()
+
+    if command == "" or command == "help" then
+        showHelp()
+    elseif command == "test" then
+        PB.UI:ShowTestMode()
+    elseif command == "lock" then
+        PB.UI:Lock()
+    elseif command == "unlock" then
+        PB.UI:Unlock()
+    elseif command == "reset" then
+        PB.UI:ResetPosition()
+    elseif command == "debug" then
+        ParseBuddyDB.debug = not ParseBuddyDB.debug
+        PB:Print("Debug output " .. (ParseBuddyDB.debug and "enabled." or "disabled."))
+    else
+        PB:Print("Unknown command: " .. command)
+        showHelp()
+    end
+end
+
+local function registerSlashCommands()
+    SLASH_PARSEBUDDY1 = "/pb"
+    SLASH_PARSEBUDDY2 = "/parsebuddy"
+    SlashCmdList.PARSEBUDDY = function(message)
+        PB:HandleSlashCommand(message)
+    end
+end
+
+function PB:Initialize()
+    ParseBuddyDB = ParseBuddyDB or {}
+    PB.Defaults:Apply(ParseBuddyDB)
+
+    local getMetadata = C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
+    PB.version = getMetadata and getMetadata(PB.addonName, "Version") or "unknown"
+
+    registerSlashCommands()
+    PB:Debug("Initialized version " .. PB.version)
+end
+
+local eventFrame = CreateFrame("Frame")
+eventFrame:RegisterEvent("ADDON_LOADED")
+eventFrame:SetScript("OnEvent", function(self, event, loadedAddonName)
+    if event ~= "ADDON_LOADED" or loadedAddonName ~= PB.addonName then
+        return
+    end
+
+    self:UnregisterEvent("ADDON_LOADED")
+    PB:Initialize()
+end)

@@ -1,0 +1,18 @@
+# Interface verified 2026-06-08 against wow_anniversary build 2.5.5.67852
+# and maintained installed *_TBC.toc manifests. Recheck after client updates.
+## Interface: 20505
+## Title: ParseBuddy
+## Notes: Your wingman for cleaner raid parses.
+## Author: TODO
+## Version: 0.1.1.0
+## SavedVariables: ParseBuddyDB
+
+Core.lua
+Defaults.lua
+Debug.lua
+UI.lua
+DebuffLibrary.lua
+State.lua
+Encounter.lua
+Events.lua
+Config.lua
