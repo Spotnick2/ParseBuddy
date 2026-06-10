@@ -72,7 +72,7 @@ assertEqual(Encounter.encounteredBosses["Creature-B"].lastUnitToken, "boss1", "l
 units.boss2 = nil
 Encounter:RefreshVisibleBosses(provider)
 assertEqual(#Encounter.visibleOrder, 0, "no visible bosses")
-assertEqual(Encounter.primaryVisibleBoss, nil, "no primary boss")
+assertEqual(Encounter.primaryVisibleBoss, nil, "vanished visible boss is hidden")
 assertEqual(Encounter:IsBossGUID("Creature-A"), true, "all hidden bosses retained")
 
 ParseBuddy.pendingGrace()
@@ -83,6 +83,27 @@ assertEqual(Encounter.active, false, "encounter ended")
 assertEqual(next(Encounter.encounteredBosses), nil, "encountered bosses reset at end")
 assertEqual(ParseBuddy.UI.calls[#ParseBuddy.UI.calls][1], "hide", "encounter UI hidden")
 
+Encounter:RefreshVisibleBosses(provider)
+assertEqual(#Encounter.visibleOrder, 0, "inactive refresh ignored")
+
+local emptyProvider = {
+    Exists = function() return false end,
+    GUID = function() return nil end,
+    Name = function() return nil end,
+}
+
+Encounter:Start(101, "Fallback Encounter", 3, 10, emptyProvider)
+assertEqual(Encounter.primaryVisibleBoss, nil, "no visible boss at fallback start")
+assertEqual(Encounter:LearnBossFromCombatLog("Creature-Z", "Fallback Boss"), true, "fallback boss learned from combat log")
+assertEqual(Encounter.primaryVisibleBoss.guid, "Creature-Z", "fallback boss becomes primary")
+assertEqual(Encounter.encounteredBosses["Creature-Z"].discoveredFromCombatLog, true, "fallback flag recorded")
+assertEqual(Encounter:LearnBossFromCombatLog("Creature-Y", "Fallback Add"), false, "second fallback target is rejected")
+assertEqual(Encounter.primaryVisibleBoss.guid, "Creature-Z", "fallback primary remains stable")
+
+Encounter:RefreshVisibleBosses(emptyProvider)
+assertEqual(Encounter.primaryVisibleBoss.guid, "Creature-Z", "combat-log fallback survives an empty boss scan")
+
+Encounter:End(101, "Fallback Encounter", 3, 10, 1)
 Encounter:RefreshVisibleBosses(provider)
 assertEqual(#Encounter.visibleOrder, 0, "inactive refresh ignored")
 

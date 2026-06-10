@@ -4,8 +4,24 @@ ParseBuddy = {
     },
     Encounter = {
         refreshed = 0,
-        IsBossGUID = function(_, guid) return guid == "Boss-GUID" end,
-        IsBossVisible = function(_, guid) return guid == "Boss-GUID" end,
+        learned = {},
+        visibleMode = true,
+        IsBossGUID = function(self, guid)
+            return self.visibleMode and guid == "Boss-GUID" or self.learned[guid] ~= nil
+        end,
+        HasVisibleBosses = function(self)
+            return self.visibleMode
+        end,
+        LearnBossFromCombatLog = function(self, guid, name)
+            if self.visibleMode then
+                return false
+            end
+            self.learned[guid] = name
+            return true
+        end,
+        ShouldRefreshForGUID = function(self, guid)
+            return self.visibleMode and guid == "Boss-GUID" or self.learned[guid] ~= nil
+        end,
         RefreshDisplay = function(self) self.refreshed = self.refreshed + 1 end,
     },
     State = {
@@ -58,5 +74,12 @@ Events:HandleCombatLogEvent()
 assertEqual(#ParseBuddy.State.events, 1, "tracked boss aura dispatched")
 assertEqual(ParseBuddy.State.events[1].amount, 5, "dose amount dispatched")
 assertEqual(ParseBuddy.Encounter.refreshed, 1, "visible boss refreshes display")
+
+ParseBuddy.Encounter.visibleMode = false
+currentEvent = { 100, "SPELL_AURA_APPLIED", false, "Player", "Tank", 0, 0, "Fallback-GUID", "Fallback Boss", 0, 0, 25225, "Sunder Armor", 1, "DEBUFF" }
+Events:HandleCombatLogEvent()
+assertEqual(#ParseBuddy.State.events, 2, "fallback boss aura dispatched")
+assertEqual(ParseBuddy.Encounter.learned["Fallback-GUID"], "Fallback Boss", "fallback boss learned from combat log")
+assertEqual(ParseBuddy.Encounter.refreshed, 2, "fallback boss refreshes display")
 
 print("ParseBuddy Events tests passed: " .. testsRun)

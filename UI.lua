@@ -106,7 +106,7 @@ local function getDefaultIconSpellId(group)
     return group.spells[1].spellIds[#group.spells[1].spellIds]
 end
 
-local function evaluationToRowData(evaluation)
+function PB.UI:EvaluationToRowData(evaluation)
     local group = evaluation.group
     local candidate = evaluation.candidate
     local spell = evaluation.spell
@@ -259,7 +259,7 @@ function PB.UI:ShowTestMode()
     local evaluations = PB.State:CreateTestEvaluations()
     local index
     for index = 1, #evaluations do
-        setRowData(frame.rows[index], evaluationToRowData(evaluations[index]))
+        setRowData(frame.rows[index], self:EvaluationToRowData(evaluations[index]))
     end
     self.mode = "test"
     frame.subtitle:SetText("Test Boss - deterministic preview")
@@ -298,7 +298,7 @@ function PB.UI:UpdateEncounter(encounter, primaryBoss, evaluations)
 
     local index
     for index = 1, #evaluations do
-        setRowData(self.frame.rows[index], evaluationToRowData(evaluations[index]))
+        setRowData(self.frame.rows[index], self:EvaluationToRowData(evaluations[index]))
     end
     self:SetRowsVisible(true)
     self.frame:SetHeight(HEADER_HEIGHT + (#evaluations * (ROW_HEIGHT + ROW_SPACING)) + FRAME_PADDING)

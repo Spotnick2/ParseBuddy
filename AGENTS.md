@@ -17,8 +17,9 @@ Tagline: "Your wingman for cleaner raid parses."
 - Avoid repeated string matching during combat.
 - Avoid per-frame scanning and raid-wide scans during combat.
 - Avoid expensive work inside `COMBAT_LOG_EVENT_UNFILTERED`.
-- Future CLEU handlers must return immediately unless the subevent is tracked, the numeric spell ID is tracked, and the destination GUID is an active boss GUID.
-- Boss aura scans must be opportunistic only: encounter start, boss unit appearance, a relevant CLEU event, an explicit debug command, or test mode when appropriate.
+- Future CLEU handlers must return immediately unless the subevent is tracked, the numeric spell ID is tracked, and the destination GUID is an active boss GUID or can be learned as the encounter target when no visible boss unit is available.
+- Boss aura scans must be opportunistic only: encounter start, boss unit appearance, a relevant CLEU event, an explicit debug command, or test mode when appropriate. Combat-log fallback discovery is allowed when no visible boss unit is present.
+- Combat-log fallback discovery is one-shot per encounter. Once a fallback GUID is selected, later tracked auras on other GUIDs must not replace it.
 - A future 0.2-second ticker may update visible timers, colors, and row visibility only. It must not scan auras.
 - Track debuff groups rather than rendering every spell as a separate row.
 - Equivalent effects satisfy the same group. For example, Sunder Armor and Expose Armor both satisfy Major Armor.
@@ -73,7 +74,7 @@ Do not implement more than the requested milestone. The first priorities are add
 
 - `Core.lua`: namespace, lifecycle, saved-variable bootstrap, slash commands.
 - `Defaults.lua`: defaults and saved-variable merge helpers.
-- `Debug.lua`: addon-prefixed and conditional debug output.
+- `Debug.lua`: addon-prefixed and conditional debug output, including dump helpers.
 - `UI.lua`: frame, rows, movement, lock state, and test mode.
 - `DebuffLibrary.lua`: static group definitions and spell-ID lookup tables.
 - `State.lua`: encounter candidate state and deterministic group evaluation.

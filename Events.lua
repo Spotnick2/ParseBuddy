@@ -11,12 +11,17 @@ local TRACKED_AURA_EVENTS = {
 }
 
 function PB.Events:HandleCombatLogEvent()
-    local timestamp, subevent, _, sourceGUID, sourceName, _, _, destGUID, _, _, _, spellId, spellName, _, _, amount = CombatLogGetCurrentEventInfo()
+    local timestamp, subevent, _, sourceGUID, sourceName, _, _, destGUID, destName, _, _, spellId, spellName, _, _, amount = CombatLogGetCurrentEventInfo()
     if not TRACKED_AURA_EVENTS[subevent] then
         return
     end
     if not PB.DebuffLibrary.spellIdToGroupKey[spellId] then
         return
+    end
+    if not PB.Encounter:IsBossGUID(destGUID) then
+        if not PB.Encounter:LearnBossFromCombatLog(destGUID, destName) then
+            return
+        end
     end
     if not PB.Encounter:IsBossGUID(destGUID) then
         return
@@ -28,11 +33,12 @@ function PB.Events:HandleCombatLogEvent()
         sourceGUID = sourceGUID,
         sourceName = sourceName,
         destGUID = destGUID,
+        destName = destName,
         spellId = spellId,
         spellName = spellName,
         amount = amount,
     })
-    if changed and PB.Encounter:IsBossVisible(destGUID) then
+    if changed and PB.Encounter:ShouldRefreshForGUID(destGUID) then
         PB.Encounter:RefreshDisplay()
     end
 end

@@ -19,17 +19,18 @@ Equivalent effects will share one row. For example, Sunder Armor and Expose Armo
 - Attack Power Reduction
 - Attack Speed Slow
 - Full List and Problems Only display modes
-- Boss-only encounter display
+- Boss encounter display with visible-boss preference and a combat-log fallback when no boss unit is exposed
 - Source player, stack, and timer information when available
 - Dependency-free, event-driven combat handling
 
 ## Commands
 
-Milestones 4 and 5 add encounter lifecycle, visible boss tracking, and CLEU-driven live debuff rows. Missing groups remain gray during the pull grace period and turn red afterward. Active effects update immediately from combat-log aura events. `/pb test` remains available.
+Milestones 4 and 5 add encounter lifecycle, boss tracking, and CLEU-driven live debuff rows. Missing groups remain gray during the pull grace period and turn red afterward. Active effects update immediately from combat-log aura events. If the client does not expose `boss1` through `boss5`, ParseBuddy can learn one fallback encounter target from the first tracked aura event; later debuffed GUIDs do not replace it. `/pb test` remains available.
 
 - `/pb` or `/parsebuddy`: show help
 - `/pb help`: show help
 - `/pb test`: show the deterministic test frame
+- `/pb dump`: print the current encounter, visible boss map, tracked candidates, and visible evaluations
 - `/pb lock`: lock the frame position
 - `/pb unlock`: allow the frame to be dragged
 - `/pb reset`: reset the frame to screen center and scale `1.00`
@@ -43,8 +44,8 @@ Milestones 4 and 5 add encounter lifecycle, visible boss tracking, and CLEU-driv
 2. Movable/lockable UI frame and deterministic `/pb test` rows
 3. Debuff library and deterministic group evaluator
 4. Encounter detection and boss GUID tracking
-5. **Current:** CLEU aura tracking for six MVP groups
-6. Opportunistic boss aura resync and timer expiration
+5. CLEU aura tracking for six MVP groups
+6. **Current:** Opportunistic boss aura resync and timer expiration
 7. Debug tools, polish, and in-game acceptance testing
 
 ## Non-Goals
@@ -68,7 +69,7 @@ Milestones 4 and 5 add encounter lifecycle, visible boss tracking, and CLEU-driv
 - `/pb scale 0.6` and `/pb scale 1.4` resize the compact frame and persist after `/reload`.
 - The close button hides the test frame.
 - `/pb test` still shows the same six scenarios after the data/evaluator refactor.
-- Starting a supported encounter shows the primary visible boss and all six live group rows.
+- Starting a supported encounter shows the primary boss and all six live group rows. Visible `bossN` units are preferred, but a tracked combat-log boss target can seed the display when no unit is exposed.
 - Missing groups are gray during pull grace and red afterward.
 - Applying, refreshing, stacking, or removing a tracked boss debuff updates its group row immediately.
 - A boss disappearing from `boss1` through `boss5` is hidden from the display without ending the encounter state.
