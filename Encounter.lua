@@ -11,6 +11,7 @@ PB.Encounter = {
 }
 
 local BOSS_UNIT_COUNT = 5
+local GRACE_REFRESH_PADDING = 0.1
 
 local function appendLine(lines, value)
     lines[#lines + 1] = value
@@ -65,7 +66,7 @@ function PB.Encounter:Start(encounterId, encounterName, difficultyId, groupSize,
     self:RefreshVisibleBosses(unitProvider)
 
     local generation = self.generation
-    C_Timer.After(ParseBuddyDB.pullGracePeriod, function()
+    C_Timer.After(ParseBuddyDB.pullGracePeriod + GRACE_REFRESH_PADDING, function()
         if self.active and self.generation == generation then
             self:RefreshDisplay()
         end
@@ -138,7 +139,31 @@ function PB.Encounter:IsPrimaryBossGUID(guid)
 end
 
 function PB.Encounter:ShouldRefreshForGUID(guid)
-    return self:IsBossVisible(guid) or self:IsPrimaryBossGUID(guid)
+    return self:IsPrimaryBossGUID(guid)
+end
+
+function PB.Encounter:ReclaimPrimaryBoss(guid)
+    if not self.active or self:HasVisibleBosses() or self.primaryVisibleBoss then
+        return false
+    end
+
+    local boss = self.encounteredBosses[guid]
+    if not boss or not (boss.lastUnitToken or boss.matchesEncounterName) then
+        return false
+    end
+
+    self.primaryVisibleBoss = boss
+    return true
+end
+
+function PB.Encounter:HasAuthoritativeHiddenBoss()
+    local _, boss
+    for _, boss in pairs(self.encounteredBosses) do
+        if boss.lastUnitToken or boss.matchesEncounterName then
+            return true
+        end
+    end
+    return false
 end
 
 function PB.Encounter:LearnBossFromCombatLog(guid, name)
@@ -147,6 +172,10 @@ function PB.Encounter:LearnBossFromCombatLog(guid, name)
     end
 
     if self:HasVisibleBosses() then
+        return false
+    end
+
+    if not self.primaryVisibleBoss and self:HasAuthoritativeHiddenBoss() then
         return false
     end
 

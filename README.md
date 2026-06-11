@@ -25,7 +25,7 @@ Equivalent effects will share one row. For example, Sunder Armor and Expose Armo
 
 ## Commands
 
-Milestones 4 and 5 add encounter lifecycle, boss tracking, and CLEU-driven live debuff rows. Missing groups remain gray during the pull grace period and turn red afterward. Active effects update immediately from combat-log aura events. If the client does not expose `boss1` through `boss5`, ParseBuddy can learn a provisional target from the first tracked aura event. A later destination whose localized name exactly matches the encounter name can replace that provisional target, while unrelated adds cannot. `/pb test` remains available.
+Milestones 4 and 5 add encounter lifecycle, boss tracking, and CLEU-driven live debuff rows. Missing groups remain gray during the pull grace period and turn red afterward. Active effects update immediately from combat-log aura events. If the client does not expose `boss1` through `boss5`, ParseBuddy can learn a provisional hostile NPC target from the first tracked non-removal aura event. A later destination whose localized name exactly matches the encounter name can replace that provisional target. Previously visible or encounter-matched bosses take precedence over newly discovered adds and can reclaim the display from their combat-log activity. `/pb test` is blocked during active encounters so fake rows cannot replace live data.
 
 - `/pb` or `/parsebuddy`: show help
 - `/pb help`: show help
@@ -72,7 +72,7 @@ Milestones 4 and 5 add encounter lifecycle, boss tracking, and CLEU-driven live 
 - Starting a supported encounter shows the primary boss and all six live group rows. Visible `bossN` units are preferred, but a tracked combat-log boss target can seed the display when no unit is exposed.
 - Missing groups are gray during pull grace and red afterward.
 - Applying, refreshing, stacking, or removing a tracked boss debuff updates its group row immediately.
-- A boss disappearing from `boss1` through `boss5` is hidden from the display without ending the encounter state.
+- A boss disappearing from `boss1` through `boss5` is hidden without ending encounter state; a later tracked aura event on that known boss can reclaim the display.
 - Encounter end hides the encounter frame.
 
 Boss aura scanning, duration recovery, repeating timer refreshes, and known-duration expiration are intentionally not implemented yet.

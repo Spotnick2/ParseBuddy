@@ -192,6 +192,20 @@ function PB.State:HandleAuraEvent(event)
         return false
     end
 
+    if event.subevent == "SPELL_AURA_REMOVED" then
+        local bossCandidates = self.candidatesByBoss[event.destGUID]
+        local groupCandidates = bossCandidates and bossCandidates[groupKey]
+        local candidate = groupCandidates and groupCandidates[event.spellId]
+        if not candidate then
+            return false
+        end
+
+        candidate.active = false
+        candidate.removedAt = event.timestamp
+        candidate.lastSeenAt = event.timestamp
+        return true
+    end
+
     local bossCandidates = self:GetBossCandidates(event.destGUID)
     local groupCandidates = bossCandidates[groupKey]
     if not groupCandidates then
@@ -199,16 +213,15 @@ function PB.State:HandleAuraEvent(event)
         bossCandidates[groupKey] = groupCandidates
     end
 
-    if event.subevent == "SPELL_AURA_REMOVED" then
-        groupCandidates[event.spellId] = nil
-        return true
-    end
-
     local candidate = groupCandidates[event.spellId] or {}
     candidate.spellId = event.spellId
     candidate.spellName = event.spellName
-    candidate.sourceName = event.sourceName
-    candidate.sourceGUID = event.sourceGUID
+    if event.sourceName ~= nil and event.sourceName ~= "" then
+        candidate.sourceName = event.sourceName
+    end
+    if event.sourceGUID ~= nil and event.sourceGUID ~= "" then
+        candidate.sourceGUID = event.sourceGUID
+    end
     candidate.destGUID = event.destGUID
     candidate.active = true
     candidate.removedAt = nil

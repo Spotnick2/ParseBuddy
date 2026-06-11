@@ -22,7 +22,10 @@ ParseBuddy = {
 
 ParseBuddyDB = { pullGracePeriod = 6, warningThreshold = 5 }
 GetTime = function() return 100 end
-C_Timer = { After = function(_, callback) ParseBuddy.pendingGrace = callback end }
+C_Timer = { After = function(delay, callback)
+    ParseBuddy.pendingGraceDelay = delay
+    ParseBuddy.pendingGrace = callback
+end }
 
 UnitExists = function() return false end
 UnitGUID = function() return nil end
@@ -61,6 +64,7 @@ assertEqual(Encounter:IsBossVisible("Creature-A"), true, "secondary boss visible
 assertEqual(ParseBuddy.UI.calls[1][1], "show", "encounter UI shown")
 assertEqual(ParseBuddy.UI.calls[#ParseBuddy.UI.calls][1], "update", "initial boss scan updates UI")
 assertEqual(type(ParseBuddy.pendingGrace), "function", "grace callback scheduled")
+assertEqual(ParseBuddy.pendingGraceDelay, 6.1, "grace refresh includes scheduling padding")
 
 units.boss1 = nil
 Encounter:RefreshVisibleBosses(provider)
@@ -76,6 +80,10 @@ Encounter:RefreshVisibleBosses(provider)
 assertEqual(#Encounter.visibleOrder, 0, "no visible bosses")
 assertEqual(Encounter.primaryVisibleBoss, nil, "vanished visible boss is hidden")
 assertEqual(Encounter:IsBossGUID("Creature-A"), true, "all hidden bosses retained")
+assertEqual(Encounter:LearnBossFromCombatLog("Creature-Add", "Restless Skeleton"), false, "add cannot replace a previously visible boss")
+assertEqual(Encounter.primaryVisibleBoss, nil, "blocked add does not become primary")
+assertEqual(Encounter:ReclaimPrimaryBoss("Creature-A"), true, "known hidden boss can reclaim primary")
+assertEqual(Encounter.primaryVisibleBoss.guid, "Creature-A", "reclaimed boss becomes primary")
 
 ParseBuddy.pendingGrace()
 assertEqual(ParseBuddy.UI.calls[#ParseBuddy.UI.calls][1], "update", "grace callback refreshes display")

@@ -19,17 +19,19 @@ local STATE_COLORS = {
     grace = { 0.20, 0.20, 0.20, 0.92 },
 }
 
+local BACKDROP = {
+    bgFile = "Interface\\Buttons\\WHITE8X8",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    edgeSize = 12,
+    insets = { left = 3, right = 3, top = 3, bottom = 3 },
+}
+
 local function createBackdrop(frame, color)
     if not frame.SetBackdrop then
         return
     end
 
-    frame:SetBackdrop({
-        bgFile = "Interface\\Buttons\\WHITE8X8",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        edgeSize = 12,
-        insets = { left = 3, right = 3, top = 3, bottom = 3 },
-    })
+    frame:SetBackdrop(BACKDROP)
     frame:SetBackdropColor(color[1], color[2], color[3], color[4])
     frame:SetBackdropBorderColor(0.45, 0.45, 0.45, 1)
 end
@@ -84,12 +86,16 @@ local function createRow(parent, index)
     row.statusText:SetWidth(62)
     row.statusText:SetJustifyH("RIGHT")
 
+    createBackdrop(row, STATE_COLORS.disabled)
+
     return row
 end
 
 local function setRowData(row, data)
     local color = STATE_COLORS[data.state] or STATE_COLORS.disabled
-    createBackdrop(row, color)
+    if row.SetBackdropColor then
+        row:SetBackdropColor(color[1], color[2], color[3], color[4])
+    end
     row.icon:SetTexture(getIcon(data.iconSpellId))
     row.groupText:SetText(data.group)
     row.effectText:SetText(data.effect)
@@ -255,6 +261,11 @@ function PB.UI:SetScale(value)
 end
 
 function PB.UI:ShowTestMode()
+    if PB.Encounter and PB.Encounter.active then
+        PB:Print("Test mode is unavailable during an active encounter.")
+        return
+    end
+
     local frame = self:CreateFrame()
     local evaluations = PB.State:CreateTestEvaluations()
     local index
@@ -305,7 +316,7 @@ function PB.UI:UpdateEncounter(encounter, primaryBoss, evaluations)
 end
 
 function PB.UI:HideEncounter()
-    if self.mode == "encounter" and self.frame then
+    if self.frame then
         self.frame:Hide()
         self.mode = nil
     end

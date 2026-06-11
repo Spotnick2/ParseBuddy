@@ -5,6 +5,7 @@ ParseBuddy = {
     Encounter = {
         refreshed = 0,
         learned = {},
+        reclaimed = {},
         visibleMode = true,
         IsBossGUID = function(self, guid)
             return self.visibleMode and guid == "Boss-GUID" or self.learned[guid] ~= nil
@@ -17,6 +18,10 @@ ParseBuddy = {
                 return false
             end
             self.learned[guid] = name
+            return true
+        end,
+        ReclaimPrimaryBoss = function(self, guid)
+            self.reclaimed[guid] = (self.reclaimed[guid] or 0) + 1
             return true
         end,
         ShouldRefreshForGUID = function(self, guid)
@@ -32,6 +37,17 @@ ParseBuddy = {
         end,
     },
 }
+
+COMBATLOG_OBJECT_TYPE_NPC = 0x800
+COMBATLOG_OBJECT_REACTION_HOSTILE = 0x40
+bit = {
+    band = function(value, mask)
+        return value % (mask * 2) >= mask and mask or 0
+    end,
+}
+
+local HOSTILE_NPC_FLAGS = 0x848
+local HOSTILE_PLAYER_FLAGS = 0x448
 
 CreateFrame = function()
     return {
@@ -76,10 +92,22 @@ assertEqual(ParseBuddy.State.events[1].amount, 5, "dose amount dispatched")
 assertEqual(ParseBuddy.Encounter.refreshed, 1, "visible boss refreshes display")
 
 ParseBuddy.Encounter.visibleMode = false
-currentEvent = { 100, "SPELL_AURA_APPLIED", false, "Player", "Tank", 0, 0, "Fallback-GUID", "Fallback Boss", 0, 0, 25225, "Sunder Armor", 1, "DEBUFF" }
+currentEvent = { 100, "SPELL_AURA_REMOVED", false, "Player", "Tank", 0, 0, "Removed-GUID", "Removed Target", HOSTILE_NPC_FLAGS, 0, 25225, "Sunder Armor", 1, "DEBUFF" }
+Events:HandleCombatLogEvent()
+assertEqual(#ParseBuddy.State.events, 1, "removal event cannot discover fallback boss")
+
+currentEvent = { 100, "SPELL_AURA_APPLIED", false, "Player", "Tank", 0, 0, "Player-GUID", "Mind Controlled Player", HOSTILE_PLAYER_FLAGS, 0, 25225, "Sunder Armor", 1, "DEBUFF" }
+Events:HandleCombatLogEvent()
+assertEqual(#ParseBuddy.State.events, 1, "hostile player cannot become fallback boss")
+
+currentEvent = { 100, "SPELL_AURA_APPLIED", false, "Player", "Tank", 0, 0, "Fallback-GUID", "Fallback Boss", HOSTILE_NPC_FLAGS, 0, 25225, "Sunder Armor", 1, "DEBUFF" }
 Events:HandleCombatLogEvent()
 assertEqual(#ParseBuddy.State.events, 2, "fallback boss aura dispatched")
 assertEqual(ParseBuddy.Encounter.learned["Fallback-GUID"], "Fallback Boss", "fallback boss learned from combat log")
 assertEqual(ParseBuddy.Encounter.refreshed, 2, "fallback boss refreshes display")
+
+currentEvent = { 101, "SPELL_AURA_REFRESH", false, "Player", "Tank", 0, 0, "Fallback-GUID", "Fallback Boss", HOSTILE_NPC_FLAGS, 0, 25225, "Sunder Armor", 1, "DEBUFF" }
+Events:HandleCombatLogEvent()
+assertEqual(ParseBuddy.Encounter.reclaimed["Fallback-GUID"], 1, "known hidden boss receives reclaim attempt")
 
 print("ParseBuddy Events tests passed: " .. testsRun)

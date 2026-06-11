@@ -10,21 +10,42 @@ local TRACKED_AURA_EVENTS = {
     SPELL_AURA_REMOVED_DOSE = true,
 }
 
+local BOSS_DISCOVERY_EVENTS = {
+    SPELL_AURA_APPLIED = true,
+    SPELL_AURA_REFRESH = true,
+    SPELL_AURA_APPLIED_DOSE = true,
+    SPELL_AURA_REMOVED_DOSE = true,
+}
+
+local function isHostileNPC(flags)
+    return flags ~= nil
+        and bit ~= nil
+        and bit.band ~= nil
+        and COMBATLOG_OBJECT_TYPE_NPC ~= nil
+        and COMBATLOG_OBJECT_REACTION_HOSTILE ~= nil
+        and bit.band(flags, COMBATLOG_OBJECT_TYPE_NPC) ~= 0
+        and bit.band(flags, COMBATLOG_OBJECT_REACTION_HOSTILE) ~= 0
+end
+
 function PB.Events:HandleCombatLogEvent()
-    local timestamp, subevent, _, sourceGUID, sourceName, _, _, destGUID, destName, _, _, spellId, spellName, _, _, amount = CombatLogGetCurrentEventInfo()
+    local timestamp, subevent, _, sourceGUID, sourceName, _, _, destGUID, destName, destFlags, _, spellId, spellName, _, _, amount = CombatLogGetCurrentEventInfo()
     if not TRACKED_AURA_EVENTS[subevent] then
         return
     end
     if not PB.DebuffLibrary.spellIdToGroupKey[spellId] then
         return
     end
-    if not PB.Encounter:IsBossGUID(destGUID) then
-        if not PB.Encounter:LearnBossFromCombatLog(destGUID, destName) then
+    if PB.Encounter:IsBossGUID(destGUID) then
+        if BOSS_DISCOVERY_EVENTS[subevent] then
+            PB.Encounter:ReclaimPrimaryBoss(destGUID)
+        end
+    else
+        if not BOSS_DISCOVERY_EVENTS[subevent]
+            or not isHostileNPC(destFlags)
+            or not PB.Encounter:LearnBossFromCombatLog(destGUID, destName)
+        then
             return
         end
-    end
-    if not PB.Encounter:IsBossGUID(destGUID) then
-        return
     end
 
     local changed = PB.State:HandleAuraEvent({

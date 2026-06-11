@@ -131,6 +131,38 @@ State:HandleAuraEvent({
 })
 live = State:EvaluateBoss("Boss-A", 102, 5, false)
 assertEqual(live[2].state, "missing", "live removal clears candidate")
+assertEqual(live[2].recentCandidate.removedAt, 102, "live removal retains recent candidate metadata")
+
+State:ResetEncounter()
+assertEqual(State:HandleAuraEvent({
+    timestamp = 103,
+    subevent = "SPELL_AURA_REMOVED",
+    destGUID = "Boss-Untracked",
+    spellId = 25225,
+}), false, "untracked removal is a no-op")
+assertEqual(State.candidatesByBoss["Boss-Untracked"], nil, "untracked removal does not allocate candidate tables")
+
+State:HandleAuraEvent({
+    timestamp = 104,
+    subevent = "SPELL_AURA_APPLIED",
+    sourceGUID = "Player-A",
+    sourceName = "Tank",
+    destGUID = "Boss-Source",
+    spellId = 25225,
+    spellName = "Sunder Armor",
+})
+State:HandleAuraEvent({
+    timestamp = 105,
+    subevent = "SPELL_AURA_REFRESH",
+    sourceGUID = nil,
+    sourceName = nil,
+    destGUID = "Boss-Source",
+    spellId = 25225,
+    spellName = "Sunder Armor",
+})
+local sourceCandidate = State.candidatesByBoss["Boss-Source"].majorArmor[25225]
+assertEqual(sourceCandidate.sourceName, "Tank", "nil-source refresh preserves source name")
+assertEqual(sourceCandidate.sourceGUID, "Player-A", "nil-source refresh preserves source GUID")
 
 live = State:EvaluateBoss("Boss-B", 102, 5, true)
 assertEqual(live[1].state, "grace", "missing group is neutral during grace")
