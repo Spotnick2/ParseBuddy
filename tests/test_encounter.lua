@@ -24,11 +24,20 @@ ParseBuddy = {
         HideEncounter = function(self)
             self.calls[#self.calls + 1] = { "hide" }
         end,
+        EvaluationToRowData = function(_, evaluation)
+            return {
+                group = "Test Group",
+                effect = evaluation.state,
+                source = "",
+                status = evaluation.state,
+            }
+        end,
     },
 }
 
 ParseBuddyDB = { pullGracePeriod = 6, warningThreshold = 5 }
 GetTime = function() return 100 end
+time = function() return 123456 end
 C_Timer = { After = function(delay, callback)
     ParseBuddy.pendingGraceDelay = delay
     ParseBuddy.pendingGrace = callback
@@ -109,11 +118,16 @@ assertEqual(Encounter.primaryVisibleBoss.guid, "Creature-A", "reclaimed boss bec
 ParseBuddy.pendingGrace()
 assertEqual(ParseBuddy.UI.calls[#ParseBuddy.UI.calls][1], "update", "grace callback refreshes display")
 
-Encounter:End(100, "Test Encounter", 3, 10, 1)
+local _, _, snapshot = Encounter:End(100, "Test Encounter", 3, 10, 1)
 assertEqual(Encounter.active, false, "encounter ended")
 assertEqual(next(Encounter.encounteredBosses), nil, "encountered bosses reset at end")
 assertEqual(ParseBuddy.UI.calls[#ParseBuddy.UI.calls][1], "hide", "encounter UI hidden")
 assertEqual(ParseBuddy.tickerCancelled, true, "display ticker cancelled at encounter end")
+assertEqual(snapshot.encounterName, "Test Encounter", "encounter end captures snapshot")
+assertEqual(snapshot.success, true, "snapshot records encounter success")
+assertEqual(snapshot.capturedAt, 123456, "snapshot records wall-clock capture time")
+assertEqual(ParseBuddy.lastEncounterSnapshot, snapshot, "snapshot retained in memory")
+assertEqual(ParseBuddyDB.lastEncounterSnapshot, snapshot, "snapshot retained in saved variables")
 
 Encounter:RefreshVisibleBosses(provider)
 assertEqual(#Encounter.visibleOrder, 0, "inactive refresh ignored")
@@ -125,6 +139,7 @@ local emptyProvider = {
 }
 
 Encounter:Start(101, "Magtheridon", 4, 25, emptyProvider)
+assertEqual(ParseBuddy.lastEncounterSnapshot, snapshot, "new encounter retains previous completed snapshot")
 assertEqual(Encounter.primaryVisibleBoss, nil, "no visible boss at fallback start")
 assertEqual(Encounter:LearnBossFromCombatLog("Creature-Z", "Hellfire Channeler"), true, "channeler becomes provisional fallback")
 assertEqual(Encounter.primaryVisibleBoss.guid, "Creature-Z", "provisional fallback becomes primary")

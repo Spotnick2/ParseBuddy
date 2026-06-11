@@ -96,6 +96,16 @@ Verify the TOC Interface against the installed TBC Anniversary client before rel
 - `/pb debugscan` performs an explicit aura scan of currently visible boss units only.
 - `/pb validate` checks configured numeric spell IDs through client spell APIs. It is user-triggered debug work and must never run automatically in combat.
 - `/pb opacity 0.2-1.0` changes the persisted alpha of the whole frame; `/pb reset` restores opacity to `1.0` with position and scale.
+- `/pb snapshot` prints the automatically captured diagnostic snapshot from the most recently completed encounter.
+- `/pb clear` clears both `ParseBuddy.lastEncounterSnapshot` and `ParseBuddyDB.lastEncounterSnapshot`.
+
+## Diagnostic Snapshot Lifecycle
+
+- Capture the snapshot immediately before encounter state is reset on `ENCOUNTER_END`.
+- Keep exactly one snapshot in memory and in `ParseBuddyDB`; use only scalar values, plain tables, and formatted strings safe for SavedVariables serialization.
+- Retain the previous completed snapshot when a new encounter starts. Replace it only when the new encounter ends.
+- Out of combat, `/pb dump` may fall back to the latest snapshot. `/pb snapshot` always prints the latest completed snapshot.
+- The snapshot is diagnostic evidence, not the deferred uptime summary. Do not add scoring, historical accumulation, or raw CLEU event storage.
 
 ## Deferred Optional Features
 

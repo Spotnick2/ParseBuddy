@@ -106,9 +106,43 @@ end
 
 function PB.Encounter:End(encounterId, encounterName, difficultyId, groupSize, success)
     local endedEncounter = self.encounter
+    local snapshot = self:CaptureSnapshot(success)
     self:Reset()
     PB.UI:HideEncounter()
-    return endedEncounter, success
+    return endedEncounter, success, snapshot
+end
+
+function PB.Encounter:CaptureSnapshot(success)
+    if not self.active or not self.encounter then
+        return nil
+    end
+
+    local endedAt = GetTime()
+    local wallClock = time and time() or 0
+    local lines = self:BuildDumpLines()
+    table.insert(lines, 2, string.format(
+        "Snapshot: name=%s success=%s duration=%.1f capturedAt=%s",
+        formatMaybe(self.encounter.name),
+        formatBool(success == 1 or success == true),
+        math.max(0, endedAt - (self.encounter.startedAt or endedAt)),
+        formatMaybe(wallClock)
+    ))
+
+    local snapshot = {
+        schemaVersion = 1,
+        encounterId = self.encounter.id,
+        encounterName = self.encounter.name,
+        difficultyId = self.encounter.difficultyId,
+        groupSize = self.encounter.groupSize,
+        startedAt = self.encounter.startedAt,
+        endedAt = endedAt,
+        capturedAt = wallClock,
+        success = success == 1 or success == true,
+        lines = lines,
+    }
+    PB.lastEncounterSnapshot = snapshot
+    ParseBuddyDB.lastEncounterSnapshot = snapshot
+    return snapshot
 end
 
 function PB.Encounter:RefreshVisibleBosses(unitProvider)

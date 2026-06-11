@@ -29,6 +29,14 @@ ParseBuddy.UI = {
             evaluations = evaluations,
         }
     end,
+    EvaluationToRowData = function(_, evaluation)
+        return {
+            group = evaluation.group.label,
+            effect = evaluation.spell and evaluation.spell.displayName or evaluation.group.missingText,
+            source = evaluation.candidate and evaluation.candidate.sourceName or "",
+            status = evaluation.state,
+        }
+    end,
 }
 
 assert(loadfile("DebuffLibrary.lua"))()

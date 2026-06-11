@@ -31,6 +31,8 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - `/pb help`: show help
 - `/pb test`: show the deterministic test frame
 - `/pb dump`: print the current encounter, visible boss map, tracked candidates, and visible evaluations
+- `/pb snapshot`: print the automatically captured diagnostic snapshot from the most recently completed encounter
+- `/pb clear`: clear the in-memory and persisted diagnostic snapshot
 - `/pb debugscan`: rescan tracked debuffs on currently visible `boss1` through `boss5` units
 - `/pb validate`: verify every configured spell ID with the current client spell APIs
 - `/pb lock`: lock the frame position
@@ -98,6 +100,9 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - Expose Armor uses the client-reported timer when the boss is visible and does not invent a fixed duration otherwise.
 - A boss disappearing from `boss1` through `boss5` is hidden without ending encounter state; a later tracked aura event on that known boss can reclaim the display.
 - Encounter end hides the encounter frame.
+- Encounter end automatically captures one compact diagnostic snapshot before live state is reset.
+- Out of combat, `/pb dump` falls back to the last completed snapshot; `/pb snapshot` prints it explicitly.
+- The snapshot survives `/reload`, remains available during the next pull, and is replaced only when another encounter ends or `/pb clear` is used.
 
 ## Live Acceptance Procedure
 
@@ -113,8 +118,11 @@ Run these checks after `/reload` with Lua errors enabled:
 8. Retest Magtheridon: a channeler may seed the provisional display, but Magtheridon must replace it when identified and CoE must remain active in that event tick.
 9. On a phase transition, verify an unrelated add cannot replace a previously visible boss and relevant activity can reclaim the known boss.
 10. End or wipe the encounter. Confirm the ticker stops and the frame hides without stale test or encounter rows.
+11. After combat, run `/pb snapshot` and `/pb dump`. Confirm both reproduce the final encounter diagnostics. Reload once and confirm the snapshot remains available, then clear it with `/pb clear`.
 
 `/pb dump` metrics are cumulative for the current encounter. `cleu` counts accepted tracked aura events, `refreshes` counts display evaluations, `ticker` counts 0.2-second ticks, and `scans` is split by boss appearance, CLEU, and manual debug scans. A growing ticker count must not increase scan counts by itself.
+
+The diagnostic snapshot is separate from the deferred uptime summary. It stores one bounded set of formatted diagnostic lines plus encounter metadata in memory and `ParseBuddyDB`. WoW writes SavedVariables during a clean `/reload`, logout, or client exit; an abrupt client crash may still lose the latest persisted copy.
 
 Known-duration effects expire locally even if CLEU removal is missed. Visible boss auras are rescanned only when a boss unit appears, after relevant CLEU activity, or through `/pb debugscan`. The 0.2-second display ticker updates timers and expiration state only; it never scans auras. Variable-duration effects such as Expose Armor rely on client aura expiration data when a visible boss unit is available.
 

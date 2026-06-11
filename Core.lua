@@ -10,7 +10,7 @@ local function trim(value)
 end
 
 local function showHelp()
-    PB:Print("Commands: /pb help, test, dump, debugscan, validate, lock, unlock, reset, scale [0.6-1.4], opacity [0.2-1.0], debug")
+    PB:Print("Commands: /pb help, test, dump, snapshot, clear, debugscan, validate, lock, unlock, reset, scale [0.6-1.4], opacity [0.2-1.0], debug")
 end
 
 function PB:HandleSlashCommand(message)
@@ -34,6 +34,10 @@ function PB:HandleSlashCommand(message)
         PB.UI:SetOpacity(argument)
     elseif command == "dump" then
         PB:Dump()
+    elseif command == "snapshot" then
+        PB:PrintSnapshot()
+    elseif command == "clear" then
+        PB:ClearSnapshot()
     elseif command == "debugscan" then
         PB.Encounter:DebugScan()
     elseif command == "validate" then
@@ -61,6 +65,7 @@ function PB:Initialize()
 
     local getMetadata = C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
     PB.version = getMetadata and getMetadata(PB.addonName, "Version") or "unknown"
+    PB.lastEncounterSnapshot = ParseBuddyDB.lastEncounterSnapshot
 
     registerSlashCommands()
     PB.UI:Initialize()
