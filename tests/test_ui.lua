@@ -76,4 +76,29 @@ ParseBuddy.UI:ApplyRowData(row, data)
 assertEqual(calls.status, 2, "changed timer text is redrawn")
 assertEqual(calls.icon, 1, "timer update does not redraw icon")
 
+local alpha
+ParseBuddyDB = { frame = { opacity = 0.65 } }
+ParseBuddy.UI.frame = {
+    SetAlpha = function(_, value) alpha = value end,
+}
+ParseBuddy.UI:ApplySavedOpacity()
+assertEqual(alpha, 0.65, "saved opacity applies to frame")
+
+ParseBuddy.UI:SetOpacity("0.45")
+assertEqual(ParseBuddyDB.frame.opacity, 0.45, "opacity setting persists")
+assertEqual(alpha, 0.45, "opacity setting applies immediately")
+
+ParseBuddy.UI:SetOpacity("0.10")
+assertEqual(ParseBuddyDB.frame.opacity, 0.45, "invalid opacity does not change setting")
+
+ParseBuddyDB.frame.point = "TOPLEFT"
+ParseBuddyDB.frame.relativePoint = "TOPLEFT"
+ParseBuddyDB.frame.x = 20
+ParseBuddyDB.frame.y = -20
+ParseBuddyDB.frame.scale = 0.8
+ParseBuddy.UI.ApplySavedPosition = function() end
+ParseBuddy.UI.ApplySavedScale = function() end
+ParseBuddy.UI:ResetPosition()
+assertEqual(ParseBuddyDB.frame.opacity, 1, "reset restores opacity")
+
 print("ParseBuddy UI tests passed: " .. testsRun)

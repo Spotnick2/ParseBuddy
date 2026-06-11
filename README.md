@@ -38,6 +38,8 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - `/pb reset`: reset the frame to screen center and scale `1.00`
 - `/pb scale`: show the current frame scale
 - `/pb scale 0.6` through `/pb scale 1.4`: resize and persist the frame scale
+- `/pb opacity`: show the current frame opacity
+- `/pb opacity 0.2` through `/pb opacity 1.0`: change and persist whole-frame opacity
 - `/pb debug`: toggle persisted debug output
 
 ## Development Milestones
@@ -68,8 +70,9 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - The frame can be dragged while unlocked.
 - `/pb lock` prevents dragging and `/pb unlock` restores it.
 - Frame position and lock state persist after `/reload`.
-- `/pb reset` returns the frame to screen center at scale `1.00`.
+- `/pb reset` returns the frame to screen center at scale and opacity `1.00`.
 - `/pb scale 0.6` and `/pb scale 1.4` resize the compact frame and persist after `/reload`.
+- `/pb opacity 0.5` makes the frame translucent and persists after `/reload`.
 - The close button hides the test frame.
 - `/pb test` still shows the same six scenarios after the data/evaluator refactor.
 - Starting a supported encounter shows the primary boss and all six live group rows. Visible `bossN` units are preferred, but a tracked combat-log boss target can seed the display when no unit is exposed.

@@ -19,6 +19,7 @@ ParseBuddy = {
         Unlock = function() end,
         ResetPosition = function() end,
         SetScale = function() end,
+        SetOpacity = function(self, value) self.opacity = value end,
     },
 }
 
@@ -51,5 +52,10 @@ ParseBuddy:HandleSlashCommand("validate")
 assertEqual(ParseBuddy.validations, 1, "validate slash command dispatches spell validation")
 ParseBuddy:HandleSlashCommand("help")
 assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "validate", 1, true) ~= nil, true, "help lists validate")
+
+ParseBuddy:HandleSlashCommand("opacity 0.65")
+assertEqual(ParseBuddy.UI.opacity, "0.65", "opacity slash command dispatches value")
+ParseBuddy:HandleSlashCommand("help")
+assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "opacity", 1, true) ~= nil, true, "help lists opacity")
 
 print("ParseBuddy Core tests passed: " .. testsRun)

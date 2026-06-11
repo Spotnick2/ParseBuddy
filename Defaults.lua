@@ -7,6 +7,7 @@ PB.Defaults = {
         frame = {
             locked = false,
             scale = 1,
+            opacity = 1,
             point = "CENTER",
             relativePoint = "CENTER",
             x = 0,

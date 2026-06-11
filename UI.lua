@@ -10,6 +10,8 @@ local FRAME_PADDING = 6
 local COLLAPSED_FRAME_HEIGHT = HEADER_HEIGHT + FRAME_PADDING
 local MIN_SCALE = 0.6
 local MAX_SCALE = 1.4
+local MIN_OPACITY = 0.2
+local MAX_OPACITY = 1
 
 local STATE_COLORS = {
     active = { 0.08, 0.42, 0.12, 0.92 },
@@ -233,6 +235,16 @@ function PB.UI:ApplySavedScale()
     frame:SetScale(scale)
 end
 
+function PB.UI:ApplySavedOpacity()
+    local frame = self:CreateFrame()
+    local opacity = tonumber(ParseBuddyDB.frame.opacity) or 1
+    if opacity < MIN_OPACITY or opacity > MAX_OPACITY then
+        opacity = 1
+        ParseBuddyDB.frame.opacity = opacity
+    end
+    frame:SetAlpha(opacity)
+end
+
 function PB.UI:UpdateLockDisplay()
     if not self.frame then
         return
@@ -257,6 +269,7 @@ function PB.UI:Initialize()
     self:CreateFrame()
     self:ApplySavedPosition()
     self:ApplySavedScale()
+    self:ApplySavedOpacity()
     self:UpdateLockDisplay()
     self.frame:Hide()
 end
@@ -276,6 +289,23 @@ function PB.UI:SetScale(value)
     ParseBuddyDB.frame.scale = scale
     self:ApplySavedScale()
     PB:Print(string.format("Frame scale set to %.2f.", scale))
+end
+
+function PB.UI:SetOpacity(value)
+    if value == nil or value == "" then
+        PB:Print(string.format("Frame opacity: %.2f", ParseBuddyDB.frame.opacity))
+        return
+    end
+
+    local opacity = tonumber(value)
+    if not opacity or opacity < MIN_OPACITY or opacity > MAX_OPACITY then
+        PB:Print(string.format("Opacity must be between %.1f and %.1f.", MIN_OPACITY, MAX_OPACITY))
+        return
+    end
+
+    ParseBuddyDB.frame.opacity = opacity
+    self:ApplySavedOpacity()
+    PB:Print(string.format("Frame opacity set to %.2f.", opacity))
 end
 
 function PB.UI:ShowTestMode()
@@ -358,7 +388,9 @@ function PB.UI:ResetPosition()
     ParseBuddyDB.frame.x = 0
     ParseBuddyDB.frame.y = 0
     ParseBuddyDB.frame.scale = 1
+    ParseBuddyDB.frame.opacity = 1
     self:ApplySavedPosition()
     self:ApplySavedScale()
-    PB:Print("Frame position and scale reset.")
+    self:ApplySavedOpacity()
+    PB:Print("Frame position, scale, and opacity reset.")
 end

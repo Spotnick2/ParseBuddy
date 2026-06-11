@@ -10,7 +10,7 @@ local function trim(value)
 end
 
 local function showHelp()
-    PB:Print("Commands: /pb help, test, dump, debugscan, validate, lock, unlock, reset, scale [0.6-1.4], debug")
+    PB:Print("Commands: /pb help, test, dump, debugscan, validate, lock, unlock, reset, scale [0.6-1.4], opacity [0.2-1.0], debug")
 end
 
 function PB:HandleSlashCommand(message)
@@ -30,6 +30,8 @@ function PB:HandleSlashCommand(message)
         PB.UI:ResetPosition()
     elseif command == "scale" then
         PB.UI:SetScale(argument)
+    elseif command == "opacity" then
+        PB.UI:SetOpacity(argument)
     elseif command == "dump" then
         PB:Dump()
     elseif command == "debugscan" then
