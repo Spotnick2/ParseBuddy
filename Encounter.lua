@@ -12,6 +12,7 @@ PB.Encounter = {
 
 local BOSS_UNIT_COUNT = 5
 local GRACE_REFRESH_PADDING = 0.1
+local DISPLAY_REFRESH_INTERVAL = 0.2
 
 local function appendLine(lines, value)
     lines[#lines + 1] = value
@@ -41,6 +42,10 @@ local runtimeUnitProvider = {
 }
 
 function PB.Encounter:Reset()
+    if self.displayTicker then
+        self.displayTicker:Cancel()
+        self.displayTicker = nil
+    end
     self.active = false
     self.encounter = nil
     self.encounteredBosses = {}
@@ -48,6 +53,18 @@ function PB.Encounter:Reset()
     self.visibleOrder = {}
     self.primaryVisibleBoss = nil
     PB.State:ResetEncounter()
+end
+
+function PB.Encounter:StartDisplayTicker()
+    if self.displayTicker or not C_Timer.NewTicker then
+        return
+    end
+
+    self.displayTicker = C_Timer.NewTicker(DISPLAY_REFRESH_INTERVAL, function()
+        if self.active then
+            self:RefreshDisplay()
+        end
+    end)
 end
 
 function PB.Encounter:Start(encounterId, encounterName, difficultyId, groupSize, unitProvider)
@@ -64,6 +81,7 @@ function PB.Encounter:Start(encounterId, encounterName, difficultyId, groupSize,
 
     PB.UI:ShowEncounter(self.encounter, nil)
     self:RefreshVisibleBosses(unitProvider)
+    self:StartDisplayTicker()
 
     local generation = self.generation
     C_Timer.After(ParseBuddyDB.pullGracePeriod + GRACE_REFRESH_PADDING, function()
@@ -87,8 +105,10 @@ function PB.Encounter:RefreshVisibleBosses(unitProvider)
 
     unitProvider = unitProvider or runtimeUnitProvider
 
+    local previousUnitByGUID = {}
     local guid
     for guid, boss in pairs(self.encounteredBosses) do
+        previousUnitByGUID[guid] = boss.unitToken
         boss.visible = false
         boss.unitToken = nil
     end
@@ -118,6 +138,10 @@ function PB.Encounter:RefreshVisibleBosses(unitProvider)
 
                 self.visibleBosses[guid] = boss
                 self.visibleOrder[#self.visibleOrder + 1] = boss
+
+                if previousUnitByGUID[guid] ~= unitToken then
+                    self:ResyncBossGUID(guid, "boss-unit-appeared")
+                end
             end
         end
     end
@@ -128,6 +152,50 @@ function PB.Encounter:RefreshVisibleBosses(unitProvider)
         self.primaryVisibleBoss = nil
     end
     self:RefreshDisplay()
+end
+
+function PB.Encounter:ResyncBossGUID(guid, reason, auraProvider)
+    local boss = self.encounteredBosses[guid]
+    if not boss or not boss.visible or not boss.unitToken then
+        return false, 0
+    end
+
+    local now = GetTime()
+    local preserveRecentSeconds = reason == "cleu" and DISPLAY_REFRESH_INTERVAL or nil
+    local scanned, trackedCount = PB.State:ResyncBossUnit(
+        boss.unitToken,
+        guid,
+        auraProvider,
+        now,
+        preserveRecentSeconds
+    )
+    if scanned then
+        boss.lastScanAt = now
+        boss.lastScanReason = reason
+        boss.lastScanTrackedCount = trackedCount
+    end
+    return scanned, trackedCount
+end
+
+function PB.Encounter:DebugScan(auraProvider)
+    if not self.active then
+        PB:Print("No active encounter to scan.")
+        return 0, 0
+    end
+
+    local scannedBosses = 0
+    local trackedAuras = 0
+    local _, boss
+    for _, boss in ipairs(self.visibleOrder) do
+        local scanned, trackedCount = self:ResyncBossGUID(boss.guid, "debugscan", auraProvider)
+        if scanned then
+            scannedBosses = scannedBosses + 1
+            trackedAuras = trackedAuras + trackedCount
+        end
+    end
+    self:RefreshDisplay()
+    PB:Print(string.format("Scanned %d visible boss unit(s); found %d tracked aura(s).", scannedBosses, trackedAuras))
+    return scannedBosses, trackedAuras
 end
 
 function PB.Encounter:HasVisibleBosses()
@@ -225,6 +293,7 @@ function PB.Encounter:RefreshDisplay()
     local evaluations
     if boss then
         local now = GetTime()
+        PB.State:ExpireBoss(boss.guid, now)
         evaluations = PB.State:EvaluateBoss(
             boss.guid,
             now,
@@ -301,13 +370,16 @@ function PB.Encounter:BuildDumpLines()
         local _, item
         for _, item in ipairs(encountered) do
             appendLine(lines, string.format(
-                "  guid=%s name=%s visible=%s unit=%s lastUnit=%s firstSeenIndex=%s",
+                "  guid=%s name=%s visible=%s unit=%s lastUnit=%s firstSeenIndex=%s lastScanAt=%s scanReason=%s scanTracked=%s",
                 formatMaybe(item.guid),
                 formatMaybe(item.name),
                 formatBool(item.visible),
                 formatMaybe(item.unitToken),
                 formatMaybe(item.lastUnitToken),
-                formatMaybe(item.firstSeenIndex)
+                formatMaybe(item.firstSeenIndex),
+                formatMaybe(item.lastScanAt),
+                formatMaybe(item.lastScanReason),
+                formatMaybe(item.lastScanTrackedCount)
             ))
         end
     end
@@ -353,7 +425,7 @@ function PB.Encounter:BuildDumpLines()
                 for candidateIndex = 1, #candidateList do
                     candidate = candidateList[candidateIndex]
                     appendLine(lines, string.format(
-                        "      spellId=%s spellName=%s source=%s stacks=%s active=%s removedAt=%s expiresAt=%s lastSeenAt=%s",
+                        "      spellId=%s spellName=%s source=%s stacks=%s active=%s removedAt=%s expiresAt=%s durationSource=%s lastSeenAt=%s lastScannedAt=%s",
                         formatMaybe(candidate.spellId),
                         formatMaybe(candidate.spellName),
                         formatMaybe(candidate.sourceName),
@@ -361,7 +433,9 @@ function PB.Encounter:BuildDumpLines()
                         formatBool(candidate.active ~= false),
                         formatMaybe(candidate.removedAt),
                         formatMaybe(candidate.expiresAt),
-                        formatMaybe(candidate.lastSeenAt)
+                        formatMaybe(candidate.durationSource),
+                        formatMaybe(candidate.lastSeenAt),
+                        formatMaybe(candidate.lastScannedAt)
                     ))
                 end
             end

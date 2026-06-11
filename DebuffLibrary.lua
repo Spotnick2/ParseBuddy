@@ -9,8 +9,8 @@ PB.DebuffLibrary = {
             required = true,
             mode = "any",
             spells = {
-                { displayName = "CoE", spellIds = { 1490, 11721, 11722, 27228 } },
-                { displayName = "CoS", spellIds = { 17862, 17937, 27229 } },
+                { displayName = "CoE", spellIds = { 1490, 11721, 11722, 27228 }, duration = 300 },
+                { displayName = "CoS", spellIds = { 17862, 17937, 27229 }, duration = 300 },
             },
         },
         {
@@ -20,7 +20,7 @@ PB.DebuffLibrary = {
             required = true,
             mode = "any",
             spells = {
-                { displayName = "Sunder", spellIds = { 7386, 7405, 8380, 11596, 11597, 25225 }, requiredStacks = 5 },
+                { displayName = "Sunder", spellIds = { 7386, 7405, 8380, 11596, 11597, 25225 }, requiredStacks = 5, duration = 30 },
                 { displayName = "Expose", spellIds = { 8647, 8649, 8650, 11197, 11198, 26866 } },
             },
         },
@@ -31,8 +31,8 @@ PB.DebuffLibrary = {
             required = true,
             mode = "any",
             spells = {
-                { displayName = "Faerie Fire", spellIds = { 770, 778, 9749, 9907, 26993 } },
-                { displayName = "Faerie Fire", spellIds = { 16857, 17390, 17391, 17392, 27011 } },
+                { displayName = "Faerie Fire", spellIds = { 770, 778, 9749, 9907, 26993 }, duration = 40 },
+                { displayName = "Faerie Fire", spellIds = { 16857, 17390, 17391, 17392, 27011 }, duration = 40 },
             },
         },
         {
@@ -42,8 +42,8 @@ PB.DebuffLibrary = {
             required = true,
             mode = "any",
             spells = {
-                { displayName = "Wisdom", spellIds = { 20186, 20354, 20355, 27164 } },
-                { displayName = "Light", spellIds = { 20185, 20344, 20345, 20346, 27162 } },
+                { displayName = "Wisdom", spellIds = { 20186, 20354, 20355, 27164 }, duration = 20 },
+                { displayName = "Light", spellIds = { 20185, 20344, 20345, 20346, 27162 }, duration = 20 },
             },
         },
         {
@@ -53,8 +53,8 @@ PB.DebuffLibrary = {
             required = true,
             mode = "any",
             spells = {
-                { displayName = "Demo Shout", spellIds = { 1160, 6190, 11554, 11555, 11556, 25203 } },
-                { displayName = "Demo Roar", spellIds = { 99, 1735, 9490, 9747, 9898, 26998 } },
+                { displayName = "Demo Shout", spellIds = { 1160, 6190, 11554, 11555, 11556, 25203 }, duration = 30 },
+                { displayName = "Demo Roar", spellIds = { 99, 1735, 9490, 9747, 9898, 26998 }, duration = 30 },
             },
         },
         {
@@ -64,7 +64,7 @@ PB.DebuffLibrary = {
             required = true,
             mode = "any",
             spells = {
-                { displayName = "Thunder Clap", spellIds = { 6343, 8198, 8204, 8205, 11580, 11581, 25264 } },
+                { displayName = "Thunder Clap", spellIds = { 6343, 8198, 8204, 8205, 11580, 11581, 25264 }, duration = 30 },
             },
         },
     },

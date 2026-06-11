@@ -24,6 +24,12 @@ ParseBuddy = {
             self.reclaimed[guid] = (self.reclaimed[guid] or 0) + 1
             return true
         end,
+        ResyncBossGUID = function(self, guid, reason)
+            self.scanned = (self.scanned or 0) + 1
+            self.lastScanGUID = guid
+            self.lastScanReason = reason
+            return self.visibleMode or self.learned[guid] ~= nil
+        end,
         ShouldRefreshForGUID = function(self, guid)
             return self.visibleMode and guid == "Boss-GUID" or self.learned[guid] ~= nil
         end,
@@ -90,6 +96,7 @@ Events:HandleCombatLogEvent()
 assertEqual(#ParseBuddy.State.events, 1, "tracked boss aura dispatched")
 assertEqual(ParseBuddy.State.events[1].amount, 5, "dose amount dispatched")
 assertEqual(ParseBuddy.Encounter.refreshed, 1, "visible boss refreshes display")
+assertEqual(ParseBuddy.Encounter.lastScanReason, "cleu", "relevant CLEU event triggers opportunistic scan")
 
 ParseBuddy.Encounter.visibleMode = false
 currentEvent = { 100, "SPELL_AURA_REMOVED", false, "Player", "Tank", 0, 0, "Removed-GUID", "Removed Target", HOSTILE_NPC_FLAGS, 0, 25225, "Sunder Armor", 1, "DEBUFF" }

@@ -53,7 +53,7 @@ Tagline: "Your wingman for cleaner raid parses."
 3. Complete: debuff library and deterministic group evaluator.
 4. Complete: encounter detection and boss GUID tracking.
 5. Complete: CLEU aura tracking for the six MVP debuff groups.
-6. Opportunistic boss aura resync and timer expiration.
+6. Complete: opportunistic boss aura resync and timer expiration.
 7. Debug tools, polish, and in-game acceptance testing.
 
 Do not implement more than the requested milestone. The first priorities are addon loading, slash commands, saved variables, then frame movement and `/pb test`.
@@ -79,8 +79,8 @@ Do not implement more than the requested milestone. The first priorities are add
 - `Debug.lua`: addon-prefixed and conditional debug output, including dump helpers.
 - `UI.lua`: frame, rows, movement, lock state, and test mode.
 - `DebuffLibrary.lua`: static group definitions and spell-ID lookup tables.
-- `State.lua`: encounter candidate state and deterministic group evaluation.
-- `Encounter.lua`: encounter lifecycle and boss GUID/unit-token tracking.
+- `State.lua`: encounter candidate state, deterministic group evaluation, known-duration expiry, and injectable single-unit aura resync.
+- `Encounter.lua`: encounter lifecycle, boss GUID/unit-token tracking, opportunistic scan triggers, and the display-only ticker.
 - `Events.lua`: event registration and lightweight CLEU dispatch.
 - `Config.lua`: profile/settings access and configuration UI.
 

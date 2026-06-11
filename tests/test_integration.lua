@@ -7,6 +7,7 @@ C_Timer = { After = function() end }
 UnitExists = function() return false end
 UnitGUID = function() return nil end
 UnitName = function() return nil end
+UnitAura = function() return nil end
 
 COMBATLOG_OBJECT_TYPE_NPC = 0x800
 COMBATLOG_OBJECT_REACTION_HOSTILE = 0x40

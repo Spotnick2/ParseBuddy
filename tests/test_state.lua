@@ -26,6 +26,9 @@ assertEqual(Library.spellIdToGroupKey[26993], "faerieFire", "Faerie Fire lookup"
 assertEqual(Library.spellIdToGroupKey[27164], "judgement", "Wisdom lookup")
 assertEqual(Library.spellIdToGroupKey[25203], "attackPower", "Demo Shout lookup")
 assertEqual(Library.spellIdToGroupKey[25264], "attackSpeed", "Thunder Clap lookup")
+assertEqual(Library.spellsById[27228].duration, 300, "CoE known duration")
+assertEqual(Library.spellsById[25225].duration, 30, "Sunder known duration")
+assertEqual(Library.spellsById[26866].duration, nil, "variable Expose duration is scan-only")
 
 local result = evaluate("majorArmor", {
     { spellId = 25225, sourceName = "Tank", sourceGUID = "B", active = true, stacks = 3, expiresAt = 120 },
@@ -106,6 +109,7 @@ assertEqual(State:HandleAuraEvent({
 local live = State:EvaluateBoss("Boss-A", 100, 5, false)
 assertEqual(live[2].state, "partial", "initial Sunder is partial")
 assertEqual(live[2].candidate.stacks, 1, "initial aura stack defaults to one")
+assertEqual(live[2].candidate.expiresAt, 130, "known duration sets CLEU expiration")
 
 State:HandleAuraEvent({
     timestamp = 101,
@@ -163,6 +167,45 @@ State:HandleAuraEvent({
 local sourceCandidate = State.candidatesByBoss["Boss-Source"].majorArmor[25225]
 assertEqual(sourceCandidate.sourceName, "Tank", "nil-source refresh preserves source name")
 assertEqual(sourceCandidate.sourceGUID, "Player-A", "nil-source refresh preserves source GUID")
+
+State:ResetEncounter()
+State:HandleAuraEvent({
+    timestamp = 200,
+    subevent = "SPELL_AURA_APPLIED",
+    sourceGUID = "Player-A",
+    sourceName = "Tank",
+    destGUID = "Boss-Expiry",
+    spellId = 25225,
+    spellName = "Sunder Armor",
+})
+assertEqual(State:ExpireBoss("Boss-Expiry", 229.9), false, "candidate remains active before known expiration")
+assertEqual(State:ExpireBoss("Boss-Expiry", 230), true, "candidate expires without removal event")
+live = State:EvaluateBoss("Boss-Expiry", 230, 5, false)
+assertEqual(live[2].state, "missing", "expired candidate evaluates missing")
+
+State.candidatesByBoss["Boss-Expose"] = {
+    majorArmor = {
+        [26866] = {
+            spellId = 26866,
+            destGUID = "Boss-Expose",
+            expiresAt = 250,
+            durationSource = "scan",
+            active = false,
+        },
+    },
+}
+State:HandleAuraEvent({
+    timestamp = 240,
+    subevent = "SPELL_AURA_APPLIED",
+    sourceGUID = "Player-Rogue",
+    sourceName = "Rogue",
+    destGUID = "Boss-Expose",
+    spellId = 26866,
+    spellName = "Expose Armor",
+})
+local exposeCandidate = State.candidatesByBoss["Boss-Expose"].majorArmor[26866]
+assertEqual(exposeCandidate.expiresAt, nil, "variable-duration apply clears stale scanned expiration")
+assertEqual(exposeCandidate.durationSource, nil, "variable-duration apply clears stale duration source")
 
 live = State:EvaluateBoss("Boss-B", 102, 5, true)
 assertEqual(live[1].state, "grace", "missing group is neutral during grace")

@@ -10,7 +10,7 @@ local function trim(value)
 end
 
 local function showHelp()
-    PB:Print("Commands: /pb help, test, dump, lock, unlock, reset, scale [0.6-1.4], debug")
+    PB:Print("Commands: /pb help, test, dump, debugscan, lock, unlock, reset, scale [0.6-1.4], debug")
 end
 
 function PB:HandleSlashCommand(message)
@@ -32,6 +32,8 @@ function PB:HandleSlashCommand(message)
         PB.UI:SetScale(argument)
     elseif command == "dump" then
         PB:Dump()
+    elseif command == "debugscan" then
+        PB.Encounter:DebugScan()
     elseif command == "debug" then
         ParseBuddyDB.debug = not ParseBuddyDB.debug
         PB:Print("Debug output " .. (ParseBuddyDB.debug and "enabled." or "disabled."))

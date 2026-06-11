@@ -4,6 +4,46 @@ PB.State = {
     candidatesByBoss = {},
 }
 
+local MAX_BOSS_DEBUFFS = 60
+
+local runtimeAuraProvider = {
+    GetDebuff = function(unitToken, index)
+        if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
+            local aura = C_UnitAuras.GetAuraDataByIndex(unitToken, index, "HARMFUL")
+            if not aura then
+                return nil
+            end
+            return {
+                name = aura.name,
+                stacks = aura.applications,
+                duration = aura.duration,
+                expirationTime = aura.expirationTime,
+                sourceUnit = aura.sourceUnit,
+                spellId = aura.spellId,
+            }
+        end
+
+        local name, _, stacks, _, duration, expirationTime, sourceUnit, _, _, spellId = UnitAura(unitToken, index, "HARMFUL")
+        if not name then
+            return nil
+        end
+        return {
+            name = name,
+            stacks = stacks,
+            duration = duration,
+            expirationTime = expirationTime,
+            sourceUnit = sourceUnit,
+            spellId = spellId,
+        }
+    end,
+    SourceGUID = function(unitToken)
+        return unitToken and UnitGUID(unitToken) or nil
+    end,
+    SourceName = function(unitToken)
+        return unitToken and UnitName(unitToken) or nil
+    end,
+}
+
 local STATE_RANK = {
     activeKnown = 1,
     activeUnknown = 2,
@@ -192,6 +232,8 @@ function PB.State:HandleAuraEvent(event)
         return false
     end
 
+    local observedAt = event.observedAt or event.timestamp
+
     if event.subevent == "SPELL_AURA_REMOVED" then
         local bossCandidates = self.candidatesByBoss[event.destGUID]
         local groupCandidates = bossCandidates and bossCandidates[groupKey]
@@ -201,8 +243,8 @@ function PB.State:HandleAuraEvent(event)
         end
 
         candidate.active = false
-        candidate.removedAt = event.timestamp
-        candidate.lastSeenAt = event.timestamp
+        candidate.removedAt = observedAt
+        candidate.lastSeenAt = observedAt
         return true
     end
 
@@ -225,7 +267,17 @@ function PB.State:HandleAuraEvent(event)
     candidate.destGUID = event.destGUID
     candidate.active = true
     candidate.removedAt = nil
-    candidate.lastSeenAt = event.timestamp
+    candidate.lastSeenAt = observedAt
+    local spell = PB.DebuffLibrary.spellsById[event.spellId]
+    if spell and spell.duration
+        and event.subevent ~= "SPELL_AURA_REMOVED_DOSE"
+    then
+        candidate.expiresAt = observedAt + spell.duration
+        candidate.durationSource = "known"
+    elseif event.subevent ~= "SPELL_AURA_REMOVED_DOSE" then
+        candidate.expiresAt = nil
+        candidate.durationSource = nil
+    end
 
     if event.subevent == "SPELL_AURA_APPLIED_DOSE" or event.subevent == "SPELL_AURA_REMOVED_DOSE" then
         candidate.stacks = event.amount or candidate.stacks or 1
@@ -235,6 +287,105 @@ function PB.State:HandleAuraEvent(event)
 
     groupCandidates[event.spellId] = candidate
     return true
+end
+
+function PB.State:ExpireBoss(bossGUID, now)
+    local bossCandidates = self.candidatesByBoss[bossGUID]
+    if not bossCandidates then
+        return false
+    end
+
+    local changed = false
+    local _, groupCandidates
+    for _, groupCandidates in pairs(bossCandidates) do
+        local _, candidate
+        for _, candidate in pairs(groupCandidates) do
+            if candidate.active ~= false and candidate.expiresAt and candidate.expiresAt <= now then
+                candidate.active = false
+                candidate.removedAt = candidate.expiresAt
+                changed = true
+            end
+        end
+    end
+    return changed
+end
+
+function PB.State:ResyncBossUnit(unitToken, bossGUID, auraProvider, now, preserveRecentSeconds)
+    if not unitToken or not bossGUID then
+        return false, 0
+    end
+
+    auraProvider = auraProvider or runtimeAuraProvider
+    now = now or GetTime()
+    local seenSpellIds = {}
+    local trackedCount = 0
+    local index
+
+    for index = 1, MAX_BOSS_DEBUFFS do
+        local aura = auraProvider.GetDebuff(unitToken, index)
+        if not aura then
+            break
+        end
+
+        local groupKey = aura.spellId and PB.DebuffLibrary.spellIdToGroupKey[aura.spellId]
+        if groupKey then
+            trackedCount = trackedCount + 1
+            seenSpellIds[aura.spellId] = true
+
+            local bossCandidates = self:GetBossCandidates(bossGUID)
+            local groupCandidates = bossCandidates[groupKey]
+            if not groupCandidates then
+                groupCandidates = {}
+                bossCandidates[groupKey] = groupCandidates
+            end
+
+            local candidate = groupCandidates[aura.spellId] or {}
+            candidate.spellId = aura.spellId
+            candidate.spellName = aura.name
+            candidate.destGUID = bossGUID
+            candidate.stacks = aura.stacks and aura.stacks > 0 and aura.stacks or 1
+            candidate.active = true
+            candidate.removedAt = nil
+            candidate.lastSeenAt = now
+            candidate.lastScannedAt = now
+            candidate.durationSource = "scan"
+
+            if aura.expirationTime and aura.expirationTime > 0 then
+                candidate.expiresAt = aura.expirationTime
+            else
+                local spell = PB.DebuffLibrary.spellsById[aura.spellId]
+                candidate.expiresAt = spell and spell.duration and (now + spell.duration) or nil
+                candidate.durationSource = candidate.expiresAt and "known" or nil
+            end
+
+            if not hasKnownSource(candidate) and aura.sourceUnit then
+                candidate.sourceGUID = auraProvider.SourceGUID and auraProvider.SourceGUID(aura.sourceUnit) or nil
+                candidate.sourceName = auraProvider.SourceName and auraProvider.SourceName(aura.sourceUnit) or nil
+            end
+
+            groupCandidates[aura.spellId] = candidate
+        end
+    end
+
+    local bossCandidates = self.candidatesByBoss[bossGUID]
+    if bossCandidates then
+        local _, groupCandidates
+        for _, groupCandidates in pairs(bossCandidates) do
+            local spellId, candidate
+            for spellId, candidate in pairs(groupCandidates) do
+                local recentlySeen = preserveRecentSeconds
+                    and candidate.lastSeenAt
+                    and now - candidate.lastSeenAt <= preserveRecentSeconds
+                if candidate.active ~= false and not seenSpellIds[spellId] and not recentlySeen then
+                    candidate.active = false
+                    candidate.removedAt = now
+                    candidate.lastScannedAt = now
+                end
+            end
+        end
+    end
+
+    return true, trackedCount
 end
 
 local function candidatesAsArray(candidatesBySpell)

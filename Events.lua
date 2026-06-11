@@ -50,6 +50,7 @@ function PB.Events:HandleCombatLogEvent()
 
     local changed = PB.State:HandleAuraEvent({
         timestamp = timestamp,
+        observedAt = GetTime and GetTime() or timestamp,
         subevent = subevent,
         sourceGUID = sourceGUID,
         sourceName = sourceName,
@@ -59,7 +60,8 @@ function PB.Events:HandleCombatLogEvent()
         spellName = spellName,
         amount = amount,
     })
-    if changed and PB.Encounter:ShouldRefreshForGUID(destGUID) then
+    local scanned = PB.Encounter:ResyncBossGUID(destGUID, "cleu")
+    if (changed or scanned) and PB.Encounter:ShouldRefreshForGUID(destGUID) then
         PB.Encounter:RefreshDisplay()
     end
 end

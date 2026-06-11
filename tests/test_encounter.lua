@@ -4,6 +4,13 @@ ParseBuddy = {
         candidatesByBoss = {},
         ResetEncounter = function(self) self.resets = self.resets + 1 end,
         ForgetBoss = function(self, bossGUID) self.candidatesByBoss[bossGUID] = nil end,
+        ResyncBossUnit = function(self, unitToken, bossGUID)
+            self.scans = (self.scans or 0) + 1
+            self.lastScanUnit = unitToken
+            self.lastScanGUID = bossGUID
+            return true, 2
+        end,
+        ExpireBoss = function(self) self.expirations = (self.expirations or 0) + 1 end,
         EvaluateBoss = function() return { { state = "missing" } } end,
     },
     UI = {
@@ -25,6 +32,13 @@ GetTime = function() return 100 end
 C_Timer = { After = function(delay, callback)
     ParseBuddy.pendingGraceDelay = delay
     ParseBuddy.pendingGrace = callback
+end,
+NewTicker = function(interval, callback)
+    ParseBuddy.tickerInterval = interval
+    ParseBuddy.tickerCallback = callback
+    return {
+        Cancel = function() ParseBuddy.tickerCancelled = true end,
+    }
 end }
 
 UnitExists = function() return false end
@@ -65,6 +79,13 @@ assertEqual(ParseBuddy.UI.calls[1][1], "show", "encounter UI shown")
 assertEqual(ParseBuddy.UI.calls[#ParseBuddy.UI.calls][1], "update", "initial boss scan updates UI")
 assertEqual(type(ParseBuddy.pendingGrace), "function", "grace callback scheduled")
 assertEqual(ParseBuddy.pendingGraceDelay, 6.1, "grace refresh includes scheduling padding")
+assertEqual(ParseBuddy.tickerInterval, 0.2, "display ticker interval")
+assertEqual(ParseBuddy.State.scans, 2, "visible bosses scanned when unit tokens appear")
+
+local callsBeforeTicker = #ParseBuddy.UI.calls
+ParseBuddy.tickerCallback()
+assertEqual(#ParseBuddy.UI.calls, callsBeforeTicker + 1, "display ticker refreshes UI")
+assertEqual(ParseBuddy.State.scans, 2, "display ticker does not scan auras")
 
 units.boss1 = nil
 Encounter:RefreshVisibleBosses(provider)
@@ -92,6 +113,7 @@ Encounter:End(100, "Test Encounter", 3, 10, 1)
 assertEqual(Encounter.active, false, "encounter ended")
 assertEqual(next(Encounter.encounteredBosses), nil, "encountered bosses reset at end")
 assertEqual(ParseBuddy.UI.calls[#ParseBuddy.UI.calls][1], "hide", "encounter UI hidden")
+assertEqual(ParseBuddy.tickerCancelled, true, "display ticker cancelled at encounter end")
 
 Encounter:RefreshVisibleBosses(provider)
 assertEqual(#Encounter.visibleOrder, 0, "inactive refresh ignored")

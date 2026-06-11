@@ -25,12 +25,13 @@ Equivalent effects will share one row. For example, Sunder Armor and Expose Armo
 
 ## Commands
 
-Milestones 4 and 5 add encounter lifecycle, boss tracking, and CLEU-driven live debuff rows. Missing groups remain gray during the pull grace period and turn red afterward. Active effects update immediately from combat-log aura events. If the client does not expose `boss1` through `boss5`, ParseBuddy can learn a provisional hostile NPC target from the first tracked non-removal aura event. A later destination whose localized name exactly matches the encounter name can replace that provisional target. Previously visible or encounter-matched bosses take precedence over newly discovered adds and can reclaim the display from their combat-log activity. `/pb test` is blocked during active encounters so fake rows cannot replace live data.
+Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live debuff rows, known-duration expiration, and opportunistic visible-boss aura resync. Missing groups remain gray during the pull grace period and turn red afterward. Active effects update immediately from combat-log aura events. If the client does not expose `boss1` through `boss5`, ParseBuddy can learn a provisional hostile NPC target from the first tracked non-removal aura event. A later destination whose localized name exactly matches the encounter name can replace that provisional target. Previously visible or encounter-matched bosses take precedence over newly discovered adds and can reclaim the display from their combat-log activity. `/pb test` is blocked during active encounters so fake rows cannot replace live data.
 
 - `/pb` or `/parsebuddy`: show help
 - `/pb help`: show help
 - `/pb test`: show the deterministic test frame
 - `/pb dump`: print the current encounter, visible boss map, tracked candidates, and visible evaluations
+- `/pb debugscan`: rescan tracked debuffs on currently visible `boss1` through `boss5` units
 - `/pb lock`: lock the frame position
 - `/pb unlock`: allow the frame to be dragged
 - `/pb reset`: reset the frame to screen center and scale `1.00`
@@ -45,8 +46,8 @@ Milestones 4 and 5 add encounter lifecycle, boss tracking, and CLEU-driven live 
 3. Debuff library and deterministic group evaluator
 4. Encounter detection and boss GUID tracking
 5. CLEU aura tracking for six MVP groups
-6. **Current:** Opportunistic boss aura resync and timer expiration
-7. Debug tools, polish, and in-game acceptance testing
+6. Complete: opportunistic boss aura resync and timer expiration
+7. **Current:** Debug tools, polish, and in-game acceptance testing
 
 ## Non-Goals
 
@@ -56,7 +57,7 @@ Milestones 4 and 5 add encounter lifecycle, boss tracking, and CLEU-driven live 
 - Assignments or import/export
 - External addon or framework dependencies
 
-## Milestones 4-5 In-Game Checks
+## MVP In-Game Checks
 
 - ParseBuddy appears in the addon list.
 - The addon loads without Lua errors.
@@ -72,9 +73,13 @@ Milestones 4 and 5 add encounter lifecycle, boss tracking, and CLEU-driven live 
 - Starting a supported encounter shows the primary boss and all six live group rows. Visible `bossN` units are preferred, but a tracked combat-log boss target can seed the display when no unit is exposed.
 - Missing groups are gray during pull grace and red afterward.
 - Applying, refreshing, stacking, or removing a tracked boss debuff updates its group row immediately.
+- Known-duration rows count down, turn yellow at the warning threshold, and become missing after expiration without requiring a removal event.
+- `/pb debugscan` reports the number of visible boss units scanned and tracked auras found.
+- A boss unit appearing with existing debuffs, or a missed earlier CLEU application, can recover tracked auras through a visible-unit scan.
+- Expose Armor uses the client-reported timer when the boss is visible and does not invent a fixed duration otherwise.
 - A boss disappearing from `boss1` through `boss5` is hidden without ending encounter state; a later tracked aura event on that known boss can reclaim the display.
 - Encounter end hides the encounter frame.
 
-Boss aura scanning, duration recovery, repeating timer refreshes, and known-duration expiration are intentionally not implemented yet.
+Known-duration effects expire locally even if CLEU removal is missed. Visible boss auras are rescanned only when a boss unit appears, after relevant CLEU activity, or through `/pb debugscan`. The 0.2-second display ticker updates timers and expiration state only; it never scans auras. Variable-duration effects such as Expose Armor rely on client aura expiration data when a visible boss unit is available.
 
 For local development, verified runtime files may be deployed directly to the TBC Anniversary `Interface\\AddOns\\ParseBuddy` directory. Reload the UI after Lua, TOC, or UI changes.
