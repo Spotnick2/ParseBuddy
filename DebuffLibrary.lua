@@ -92,3 +92,40 @@ function PB.DebuffLibrary:BuildLookups()
 end
 
 PB.DebuffLibrary:BuildLookups()
+
+local runtimeSpellProvider = {
+    GetName = function(spellId)
+        if C_Spell and C_Spell.GetSpellInfo then
+            local info = C_Spell.GetSpellInfo(spellId)
+            if type(info) == "table" then
+                return info.name
+            end
+            return info
+        end
+        if GetSpellInfo then
+            return GetSpellInfo(spellId)
+        end
+        return nil
+    end,
+}
+
+function PB.DebuffLibrary:ValidateSpellIds(spellProvider)
+    spellProvider = spellProvider or runtimeSpellProvider
+    local result = {
+        checked = 0,
+        valid = 0,
+        missingIds = {},
+    }
+
+    local spellId
+    for spellId in pairs(self.spellIdToGroupKey) do
+        result.checked = result.checked + 1
+        if spellProvider.GetName(spellId) then
+            result.valid = result.valid + 1
+        else
+            result.missingIds[#result.missingIds + 1] = spellId
+        end
+    end
+    table.sort(result.missingIds)
+    return result
+end

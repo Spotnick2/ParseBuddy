@@ -85,6 +85,15 @@ Encounter.encounter = {
     difficultyId = 3,
     groupSize = 10,
     startedAt = 100,
+    metrics = {
+        relevantCLEU = 4,
+        displayRefreshes = 12,
+        tickerTicks = 8,
+        scans = 3,
+        scansByReason = { cleu = 2, debugscan = 1 },
+        inspectedAuras = 18,
+        trackedAurasSeen = 5,
+    },
 }
 Encounter.visibleOrder = {
     { guid = "Creature-B", name = "Primary Boss", unitToken = "boss1", visible = true, lastUnitToken = "boss1", firstSeenIndex = 1 },
@@ -102,6 +111,7 @@ Encounter.encounteredBosses = {
 
 local lines = Encounter:BuildDumpLines()
 assertContains(lines, "Encounter: active=yes", "active encounter line")
+assertContains(lines, "Metrics: cleu=4 refreshes=12 ticker=8 scans=3", "diagnostic metrics line")
 assertContains(lines, "boss1: guid=Creature-B", "visible boss mapping")
 assertContains(lines, "Tracked candidates:", "tracked candidates heading")
 assertContains(lines, "spellId=27228", "candidate summary")

@@ -36,9 +36,10 @@ local provider = {
     SourceName = function(unit) return unit == "raid1" and "Tank" or nil end,
 }
 
-local scanned, tracked = State:ResyncBossUnit("boss1", "Boss-A", provider, 100)
+local scanned, tracked, inspected = State:ResyncBossUnit("boss1", "Boss-A", provider, 100)
 assertEqual(scanned, true, "visible boss scan completes")
 assertEqual(tracked, 1, "scan counts tracked auras only")
+assertEqual(inspected, 2, "scan reports inspected aura count")
 local candidate = State.candidatesByBoss["Boss-A"].majorArmor[25225]
 assertEqual(candidate.stacks, 5, "scan confirms stack count")
 assertEqual(candidate.expiresAt, 125, "scan uses client expiration")
@@ -86,5 +87,32 @@ local recent = State.candidatesByBoss["Boss-Race"].faerieFire[26993]
 assertEqual(recent.active, true, "same-frame CLEU candidate survives a lagging aura scan")
 State:ResyncBossUnit("boss1", "Boss-Race", provider, 200.3, 0.2)
 assertEqual(recent.active, false, "later complete scan can clear absent CLEU candidate")
+
+State:HandleAuraEvent({
+    observedAt = 300,
+    subevent = "SPELL_AURA_APPLIED",
+    sourceName = "Tank",
+    destGUID = "Boss-Removal",
+    spellId = 25225,
+    spellName = "Sunder Armor",
+})
+State:HandleAuraEvent({
+    observedAt = 301,
+    subevent = "SPELL_AURA_REMOVED",
+    destGUID = "Boss-Removal",
+    spellId = 25225,
+})
+auras = {
+    {
+        name = "Sunder Armor",
+        stacks = 5,
+        expirationTime = 330,
+        spellId = 25225,
+    },
+}
+State:ResyncBossUnit("boss1", "Boss-Removal", provider, 301, 0.2, 25225)
+local removed = State.candidatesByBoss["Boss-Removal"].majorArmor[25225]
+assertEqual(removed.active, false, "stale scan cannot reactivate a just-removed aura")
+assertEqual(removed.removedAt, 301, "CLEU removal timestamp remains authoritative")
 
 print("ParseBuddy resync tests passed: " .. testsRun)

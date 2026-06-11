@@ -25,3 +25,24 @@ function PB:Dump()
         self:Print(lines[index])
     end
 end
+
+function PB:ValidateSpellIds(spellProvider)
+    local result = self.DebuffLibrary:ValidateSpellIds(spellProvider)
+    self:Print(string.format(
+        "Spell validation: %d/%d tracked IDs available; %d missing.",
+        result.valid,
+        result.checked,
+        #result.missingIds
+    ))
+
+    local index
+    for index = 1, #result.missingIds do
+        local spellId = result.missingIds[index]
+        self:Print(string.format(
+            "Missing spell ID %d (group=%s).",
+            spellId,
+            tostring(self.DebuffLibrary.spellIdToGroupKey[spellId])
+        ))
+    end
+    return result
+end

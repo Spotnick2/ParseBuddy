@@ -91,16 +91,34 @@ local function createRow(parent, index)
     return row
 end
 
-local function setRowData(row, data)
+function PB.UI:ApplyRowData(row, data)
     local color = STATE_COLORS[data.state] or STATE_COLORS.disabled
-    if row.SetBackdropColor then
-        row:SetBackdropColor(color[1], color[2], color[3], color[4])
+    if row.displayState ~= data.state then
+        if row.SetBackdropColor then
+            row:SetBackdropColor(color[1], color[2], color[3], color[4])
+        end
+        row.displayState = data.state
     end
-    row.icon:SetTexture(getIcon(data.iconSpellId))
-    row.groupText:SetText(data.group)
-    row.effectText:SetText(data.effect)
-    row.sourceText:SetText(data.source)
-    row.statusText:SetText(data.status)
+    if row.iconSpellId ~= data.iconSpellId then
+        row.icon:SetTexture(getIcon(data.iconSpellId))
+        row.iconSpellId = data.iconSpellId
+    end
+    if row.groupValue ~= data.group then
+        row.groupText:SetText(data.group)
+        row.groupValue = data.group
+    end
+    if row.effectValue ~= data.effect then
+        row.effectText:SetText(data.effect)
+        row.effectValue = data.effect
+    end
+    if row.sourceValue ~= data.source then
+        row.sourceText:SetText(data.source)
+        row.sourceValue = data.source
+    end
+    if row.statusValue ~= data.status then
+        row.statusText:SetText(data.status)
+        row.statusValue = data.status
+    end
 end
 
 local function formatDuration(remaining)
@@ -270,7 +288,7 @@ function PB.UI:ShowTestMode()
     local evaluations = PB.State:CreateTestEvaluations()
     local index
     for index = 1, #evaluations do
-        setRowData(frame.rows[index], self:EvaluationToRowData(evaluations[index]))
+        self:ApplyRowData(frame.rows[index], self:EvaluationToRowData(evaluations[index]))
     end
     self.mode = "test"
     frame.subtitle:SetText("Test Boss - deterministic preview")
@@ -309,7 +327,7 @@ function PB.UI:UpdateEncounter(encounter, primaryBoss, evaluations)
 
     local index
     for index = 1, #evaluations do
-        setRowData(self.frame.rows[index], self:EvaluationToRowData(evaluations[index]))
+        self:ApplyRowData(self.frame.rows[index], self:EvaluationToRowData(evaluations[index]))
     end
     self:SetRowsVisible(true)
     self.frame:SetHeight(HEADER_HEIGHT + (#evaluations * (ROW_HEIGHT + ROW_SPACING)) + FRAME_PADDING)

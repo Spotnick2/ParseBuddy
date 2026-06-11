@@ -2,7 +2,7 @@
 
 **Your wingman for cleaner raid parses.**
 
-ParseBuddy is an early-MVP World of Warcraft addon for TBC Anniversary. It is not raid-ready yet.
+ParseBuddy is an MVP World of Warcraft addon for TBC Anniversary. The implementation milestones are complete; supervised in-game acceptance is still required before treating it as raid-ready.
 
 ## Core Concept
 
@@ -32,6 +32,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - `/pb test`: show the deterministic test frame
 - `/pb dump`: print the current encounter, visible boss map, tracked candidates, and visible evaluations
 - `/pb debugscan`: rescan tracked debuffs on currently visible `boss1` through `boss5` units
+- `/pb validate`: verify every configured spell ID with the current client spell APIs
 - `/pb lock`: lock the frame position
 - `/pb unlock`: allow the frame to be dragged
 - `/pb reset`: reset the frame to screen center and scale `1.00`
@@ -47,7 +48,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 4. Encounter detection and boss GUID tracking
 5. CLEU aura tracking for six MVP groups
 6. Complete: opportunistic boss aura resync and timer expiration
-7. **Current:** Debug tools, polish, and in-game acceptance testing
+7. Complete: debug tools, polish, and in-game acceptance checklist
 
 ## Non-Goals
 
@@ -62,6 +63,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - ParseBuddy appears in the addon list.
 - The addon loads without Lua errors.
 - `/pb` and `/parsebuddy` both show help.
+- `/pb validate` reports the configured spell-ID total and identifies any IDs unavailable in the current client.
 - `/pb test` shows six green, yellow, red, and gray preview rows.
 - The frame can be dragged while unlocked.
 - `/pb lock` prevents dragging and `/pb unlock` restores it.
@@ -79,6 +81,23 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - Expose Armor uses the client-reported timer when the boss is visible and does not invent a fixed duration otherwise.
 - A boss disappearing from `boss1` through `boss5` is hidden without ending encounter state; a later tracked aura event on that known boss can reclaim the display.
 - Encounter end hides the encounter frame.
+
+## Live Acceptance Procedure
+
+Run these checks after `/reload` with Lua errors enabled:
+
+1. Run `/pb validate`. Record any missing IDs; expected client-specific failures must be investigated before the row is trusted.
+2. Run `/pb test`, verify all six deterministic rows, then close and reopen it.
+3. Verify unlock, drag, lock, scale, `/pb reset`, and persistence across another `/reload`.
+4. On a normal `boss1` encounter, verify the title, grace period, all six rows, source names, Sunder stacks, warning colors, and countdowns.
+5. Apply and remove each available tracked debuff. Confirm CLEU changes appear immediately and known timers expire without requiring a removal event.
+6. Run `/pb debugscan` while the boss is visible. Confirm the boss count and tracked-aura count match the frame.
+7. Run `/pb dump`. Confirm the primary GUID, scan reason, candidate expiration source, and visible evaluations match the boss.
+8. Retest Magtheridon: a channeler may seed the provisional display, but Magtheridon must replace it when identified and CoE must remain active in that event tick.
+9. On a phase transition, verify an unrelated add cannot replace a previously visible boss and relevant activity can reclaim the known boss.
+10. End or wipe the encounter. Confirm the ticker stops and the frame hides without stale test or encounter rows.
+
+`/pb dump` metrics are cumulative for the current encounter. `cleu` counts accepted tracked aura events, `refreshes` counts display evaluations, `ticker` counts 0.2-second ticks, and `scans` is split by boss appearance, CLEU, and manual debug scans. A growing ticker count must not increase scan counts by itself.
 
 Known-duration effects expire locally even if CLEU removal is missed. Visible boss auras are rescanned only when a boss unit appears, after relevant CLEU activity, or through `/pb debugscan`. The 0.2-second display ticker updates timers and expiration state only; it never scans auras. Variable-duration effects such as Expose Armor rely on client aura expiration data when a visible boss unit is available.
 

@@ -62,6 +62,10 @@ function PB.Encounter:StartDisplayTicker()
 
     self.displayTicker = C_Timer.NewTicker(DISPLAY_REFRESH_INTERVAL, function()
         if self.active then
+            local metrics = self.encounter and self.encounter.metrics
+            if metrics then
+                metrics.tickerTicks = metrics.tickerTicks + 1
+            end
             self:RefreshDisplay()
         end
     end)
@@ -77,6 +81,15 @@ function PB.Encounter:Start(encounterId, encounterName, difficultyId, groupSize,
         difficultyId = difficultyId,
         groupSize = groupSize,
         startedAt = GetTime(),
+        metrics = {
+            relevantCLEU = 0,
+            displayRefreshes = 0,
+            tickerTicks = 0,
+            scans = 0,
+            scansByReason = {},
+            inspectedAuras = 0,
+            trackedAurasSeen = 0,
+        },
     }
 
     PB.UI:ShowEncounter(self.encounter, nil)
@@ -154,7 +167,7 @@ function PB.Encounter:RefreshVisibleBosses(unitProvider)
     self:RefreshDisplay()
 end
 
-function PB.Encounter:ResyncBossGUID(guid, reason, auraProvider)
+function PB.Encounter:ResyncBossGUID(guid, reason, auraProvider, ignoredSpellId)
     local boss = self.encounteredBosses[guid]
     if not boss or not boss.visible or not boss.unitToken then
         return false, 0
@@ -162,19 +175,33 @@ function PB.Encounter:ResyncBossGUID(guid, reason, auraProvider)
 
     local now = GetTime()
     local preserveRecentSeconds = reason == "cleu" and DISPLAY_REFRESH_INTERVAL or nil
-    local scanned, trackedCount = PB.State:ResyncBossUnit(
+    local scanned, trackedCount, inspectedCount = PB.State:ResyncBossUnit(
         boss.unitToken,
         guid,
         auraProvider,
         now,
-        preserveRecentSeconds
+        preserveRecentSeconds,
+        ignoredSpellId
     )
     if scanned then
         boss.lastScanAt = now
         boss.lastScanReason = reason
         boss.lastScanTrackedCount = trackedCount
+        local metrics = self.encounter and self.encounter.metrics
+        if metrics then
+            metrics.scans = metrics.scans + 1
+            metrics.scansByReason[reason] = (metrics.scansByReason[reason] or 0) + 1
+            metrics.inspectedAuras = metrics.inspectedAuras + (inspectedCount or 0)
+            metrics.trackedAurasSeen = metrics.trackedAurasSeen + trackedCount
+        end
     end
-    return scanned, trackedCount
+    return scanned, trackedCount, inspectedCount
+end
+
+function PB.Encounter:RecordRelevantCLEU()
+    if self.encounter and self.encounter.metrics then
+        self.encounter.metrics.relevantCLEU = self.encounter.metrics.relevantCLEU + 1
+    end
 end
 
 function PB.Encounter:DebugScan(auraProvider)
@@ -289,6 +316,11 @@ function PB.Encounter:RefreshDisplay()
         return
     end
 
+    local metrics = self.encounter and self.encounter.metrics
+    if metrics then
+        metrics.displayRefreshes = metrics.displayRefreshes + 1
+    end
+
     local boss = self.primaryVisibleBoss
     local evaluations
     if boss then
@@ -323,6 +355,20 @@ function PB.Encounter:BuildDumpLines()
         formatMaybe(self.encounter and self.encounter.difficultyId),
         formatMaybe(self.encounter and self.encounter.groupSize),
         tonumber(self.encounter and self.encounter.startedAt) or 0
+    ))
+    local metrics = self.encounter.metrics or {}
+    local scansByReason = metrics.scansByReason or {}
+    appendLine(lines, string.format(
+        "Metrics: cleu=%d refreshes=%d ticker=%d scans=%d [appear=%d cleu=%d debug=%d] inspected=%d trackedSeen=%d",
+        metrics.relevantCLEU or 0,
+        metrics.displayRefreshes or 0,
+        metrics.tickerTicks or 0,
+        metrics.scans or 0,
+        scansByReason["boss-unit-appeared"] or 0,
+        scansByReason.cleu or 0,
+        scansByReason.debugscan or 0,
+        metrics.inspectedAuras or 0,
+        metrics.trackedAurasSeen or 0
     ))
     local primaryBoss = self.primaryVisibleBoss
     appendLine(lines, string.format(

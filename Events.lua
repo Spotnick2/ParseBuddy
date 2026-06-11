@@ -60,7 +60,9 @@ function PB.Events:HandleCombatLogEvent()
         spellName = spellName,
         amount = amount,
     })
-    local scanned = PB.Encounter:ResyncBossGUID(destGUID, "cleu")
+    PB.Encounter:RecordRelevantCLEU()
+    local ignoredSpellId = subevent == "SPELL_AURA_REMOVED" and spellId or nil
+    local scanned = PB.Encounter:ResyncBossGUID(destGUID, "cleu", nil, ignoredSpellId)
     if (changed or scanned) and PB.Encounter:ShouldRefreshForGUID(destGUID) then
         PB.Encounter:RefreshDisplay()
     end

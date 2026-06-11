@@ -54,7 +54,7 @@ Tagline: "Your wingman for cleaner raid parses."
 4. Complete: encounter detection and boss GUID tracking.
 5. Complete: CLEU aura tracking for the six MVP debuff groups.
 6. Complete: opportunistic boss aura resync and timer expiration.
-7. Debug tools, polish, and in-game acceptance testing.
+7. Complete: debug tools, polish, and in-game acceptance checklist.
 
 Do not implement more than the requested milestone. The first priorities are addon loading, slash commands, saved variables, then frame movement and `/pb test`.
 
@@ -89,3 +89,9 @@ Do not implement more than the requested milestone. The first priorities are add
 Use Chromium-style `MAJOR.MINOR.BUILD.PATCH` versions as documented in `VERSIONING.md`. The authoritative version is the `Version` field in `ParseBuddy.toc`; runtime code should read addon metadata rather than duplicating it.
 
 Verify the TOC Interface against the installed TBC Anniversary client before releases and after client updates. Do not assume an old value remains valid.
+
+## MVP Diagnostic Commands
+
+- `/pb dump` prints current encounter identity, boss mappings, cumulative event/refresh/scan metrics, candidates, expiration sources, and visible evaluations.
+- `/pb debugscan` performs an explicit aura scan of currently visible boss units only.
+- `/pb validate` checks configured numeric spell IDs through client spell APIs. It is user-triggered debug work and must never run automatically in combat.

@@ -24,11 +24,15 @@ ParseBuddy = {
             self.reclaimed[guid] = (self.reclaimed[guid] or 0) + 1
             return true
         end,
-        ResyncBossGUID = function(self, guid, reason)
+        ResyncBossGUID = function(self, guid, reason, _, ignoredSpellId)
             self.scanned = (self.scanned or 0) + 1
             self.lastScanGUID = guid
             self.lastScanReason = reason
+            self.lastIgnoredSpellId = ignoredSpellId
             return self.visibleMode or self.learned[guid] ~= nil
+        end,
+        RecordRelevantCLEU = function(self)
+            self.relevant = (self.relevant or 0) + 1
         end,
         ShouldRefreshForGUID = function(self, guid)
             return self.visibleMode and guid == "Boss-GUID" or self.learned[guid] ~= nil
@@ -97,6 +101,7 @@ assertEqual(#ParseBuddy.State.events, 1, "tracked boss aura dispatched")
 assertEqual(ParseBuddy.State.events[1].amount, 5, "dose amount dispatched")
 assertEqual(ParseBuddy.Encounter.refreshed, 1, "visible boss refreshes display")
 assertEqual(ParseBuddy.Encounter.lastScanReason, "cleu", "relevant CLEU event triggers opportunistic scan")
+assertEqual(ParseBuddy.Encounter.relevant, 1, "tracked boss event increments diagnostics")
 
 ParseBuddy.Encounter.visibleMode = false
 currentEvent = { 100, "SPELL_AURA_REMOVED", false, "Player", "Tank", 0, 0, "Removed-GUID", "Removed Target", HOSTILE_NPC_FLAGS, 0, 25225, "Sunder Armor", 1, "DEBUFF" }
@@ -116,5 +121,9 @@ assertEqual(ParseBuddy.Encounter.refreshed, 2, "fallback boss refreshes display"
 currentEvent = { 101, "SPELL_AURA_REFRESH", false, "Player", "Tank", 0, 0, "Fallback-GUID", "Fallback Boss", HOSTILE_NPC_FLAGS, 0, 25225, "Sunder Armor", 1, "DEBUFF" }
 Events:HandleCombatLogEvent()
 assertEqual(ParseBuddy.Encounter.reclaimed["Fallback-GUID"], 1, "known hidden boss receives reclaim attempt")
+
+currentEvent = { 102, "SPELL_AURA_REMOVED", false, "Player", "Tank", 0, 0, "Fallback-GUID", "Fallback Boss", HOSTILE_NPC_FLAGS, 0, 25225, "Sunder Armor", 1, "DEBUFF" }
+Events:HandleCombatLogEvent()
+assertEqual(ParseBuddy.Encounter.lastIgnoredSpellId, 25225, "full removal excludes stale same-frame aura from resync")
 
 print("ParseBuddy Events tests passed: " .. testsRun)

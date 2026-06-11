@@ -3,6 +3,10 @@ ParseBuddy = {
     Print = function(self, message)
         self.messages[#self.messages + 1] = message
     end,
+    validations = 0,
+    ValidateSpellIds = function(self)
+        self.validations = self.validations + 1
+    end,
     Encounter = {
         scans = 0,
         DebugScan = function(self)
@@ -42,5 +46,10 @@ assertEqual(ParseBuddy.Encounter.scans, 1, "debugscan slash command dispatches e
 
 ParseBuddy:HandleSlashCommand("help")
 assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "debugscan", 1, true) ~= nil, true, "help lists debugscan")
+
+ParseBuddy:HandleSlashCommand("validate")
+assertEqual(ParseBuddy.validations, 1, "validate slash command dispatches spell validation")
+ParseBuddy:HandleSlashCommand("help")
+assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "validate", 1, true) ~= nil, true, "help lists validate")
 
 print("ParseBuddy Core tests passed: " .. testsRun)

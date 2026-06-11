@@ -38,4 +38,42 @@ ParseBuddy.UI:HideEncounter()
 assertEqual(hides, 1, "encounter end hides frame regardless of prior mode")
 assertEqual(ParseBuddy.UI.mode, nil, "encounter end clears UI mode")
 
+GetSpellTexture = function(spellId) return "icon-" .. tostring(spellId) end
+local calls = { color = 0, icon = 0, group = 0, effect = 0, source = 0, status = 0 }
+local function textTarget(key)
+    return {
+        SetText = function()
+            calls[key] = calls[key] + 1
+        end,
+    }
+end
+local row = {
+    SetBackdropColor = function() calls.color = calls.color + 1 end,
+    icon = { SetTexture = function() calls.icon = calls.icon + 1 end },
+    groupText = textTarget("group"),
+    effectText = textTarget("effect"),
+    sourceText = textTarget("source"),
+    statusText = textTarget("status"),
+}
+local data = {
+    state = "active",
+    iconSpellId = 25225,
+    group = "Armor",
+    effect = "Sunder 5/5",
+    source = "Tank",
+    status = "00:24",
+}
+ParseBuddy.UI:ApplyRowData(row, data)
+ParseBuddy.UI:ApplyRowData(row, data)
+assertEqual(calls.color, 1, "unchanged row color is not redrawn")
+assertEqual(calls.icon, 1, "unchanged row icon is not redrawn")
+assertEqual(calls.group, 1, "unchanged group text is not redrawn")
+assertEqual(calls.effect, 1, "unchanged effect text is not redrawn")
+assertEqual(calls.source, 1, "unchanged source text is not redrawn")
+assertEqual(calls.status, 1, "unchanged timer text is not redrawn")
+data.status = "00:23"
+ParseBuddy.UI:ApplyRowData(row, data)
+assertEqual(calls.status, 2, "changed timer text is redrawn")
+assertEqual(calls.icon, 1, "timer update does not redraw icon")
+
 print("ParseBuddy UI tests passed: " .. testsRun)

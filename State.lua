@@ -310,7 +310,7 @@ function PB.State:ExpireBoss(bossGUID, now)
     return changed
 end
 
-function PB.State:ResyncBossUnit(unitToken, bossGUID, auraProvider, now, preserveRecentSeconds)
+function PB.State:ResyncBossUnit(unitToken, bossGUID, auraProvider, now, preserveRecentSeconds, ignoredSpellId)
     if not unitToken or not bossGUID then
         return false, 0
     end
@@ -319,6 +319,7 @@ function PB.State:ResyncBossUnit(unitToken, bossGUID, auraProvider, now, preserv
     now = now or GetTime()
     local seenSpellIds = {}
     local trackedCount = 0
+    local inspectedCount = 0
     local index
 
     for index = 1, MAX_BOSS_DEBUFFS do
@@ -326,8 +327,11 @@ function PB.State:ResyncBossUnit(unitToken, bossGUID, auraProvider, now, preserv
         if not aura then
             break
         end
+        inspectedCount = inspectedCount + 1
 
-        local groupKey = aura.spellId and PB.DebuffLibrary.spellIdToGroupKey[aura.spellId]
+        local groupKey = aura.spellId ~= ignoredSpellId
+            and aura.spellId
+            and PB.DebuffLibrary.spellIdToGroupKey[aura.spellId]
         if groupKey then
             trackedCount = trackedCount + 1
             seenSpellIds[aura.spellId] = true
@@ -385,7 +389,7 @@ function PB.State:ResyncBossUnit(unitToken, bossGUID, auraProvider, now, preserv
         end
     end
 
-    return true, trackedCount
+    return true, trackedCount, inspectedCount
 end
 
 local function candidatesAsArray(candidatesBySpell)
