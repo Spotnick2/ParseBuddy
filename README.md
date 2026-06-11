@@ -60,6 +60,20 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - Assignments or import/export
 - External addon or framework dependencies
 
+## Not Yet Implemented
+
+- Profiles and per-group enable, required, and optional settings
+- Problems Only versus Full List behavior
+- Additional optional debuff groups and boss-specific profiles
+- Multi-boss display sections
+- Sounds, raid warnings, whispers, assignments, and import/export
+- Optional post-encounter debuff uptime summary based only on ParseBuddy's in-memory live encounter state:
+  - calculate uptime for every monitored debuff group when the encounter ends
+  - optionally show the summary automatically after the fight
+  - `/pb summary` reopens the most recent encounter summary
+  - retain only the latest summary in memory until `/pb clear` or the next boss encounter starts
+  - no Warcraft Logs calls, combat-log file parsing, scoring, upload, or persistence across reloads
+
 ## MVP In-Game Checks
 
 - ParseBuddy appears in the addon list.

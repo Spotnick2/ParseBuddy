@@ -96,3 +96,13 @@ Verify the TOC Interface against the installed TBC Anniversary client before rel
 - `/pb debugscan` performs an explicit aura scan of currently visible boss units only.
 - `/pb validate` checks configured numeric spell IDs through client spell APIs. It is user-triggered debug work and must never run automatically in combat.
 - `/pb opacity 0.2-1.0` changes the persisted alpha of the whole frame; `/pb reset` restores opacity to `1.0` with position and scale.
+
+## Deferred Optional Features
+
+- A post-encounter uptime summary may be implemented only when explicitly requested as a separate post-MVP milestone.
+- It must derive uptime from ParseBuddy's in-memory real-time encounter state, not Warcraft Logs, archived combat logs, uploads, scraping, or external calls.
+- It should calculate uptime for each monitored debuff group when the encounter ends, with an option to display automatically.
+- `/pb summary` should display the most recent encounter summary.
+- Keep only the latest summary in memory. Clear it on `/pb clear` or when a new boss encounter starts.
+- Do not persist summaries across `/reload` or logout unless explicitly requested later.
+- Do not turn the summary into player scoring, blame, ranking, or a full post-raid parser.
