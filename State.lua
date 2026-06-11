@@ -182,6 +182,10 @@ function PB.State:GetBossCandidates(bossGUID)
     return bossCandidates
 end
 
+function PB.State:ForgetBoss(bossGUID)
+    self.candidatesByBoss[bossGUID] = nil
+end
+
 function PB.State:HandleAuraEvent(event)
     local groupKey = PB.DebuffLibrary.spellIdToGroupKey[event.spellId]
     if not groupKey then

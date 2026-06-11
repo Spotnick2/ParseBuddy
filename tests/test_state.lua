@@ -88,6 +88,10 @@ result = evaluate("majorArmor", {
 })
 assertEqual(result.candidate.sourceGUID, "A", "source GUID breaks final tie")
 
+State.candidatesByBoss["Boss-To-Forget"] = { majorArmor = {} }
+State:ForgetBoss("Boss-To-Forget")
+assertEqual(State.candidatesByBoss["Boss-To-Forget"], nil, "forget boss clears candidate state")
+
 State:ResetEncounter()
 assertEqual(State:HandleAuraEvent({
     timestamp = 100,

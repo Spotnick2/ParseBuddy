@@ -118,9 +118,10 @@ Encounter.primaryVisibleBoss = {
     name = "Fallback Boss",
     visible = false,
     discoveredFromCombatLog = true,
+    matchesEncounterName = true,
 }
 Encounter.encounteredBosses["Creature-Z"] = Encounter.primaryVisibleBoss
 local fallbackLines = Encounter:BuildDumpLines()
-assertContains(fallbackLines, "primaryBoss=Fallback Boss visible=no fallback=yes", "fallback boss status")
+assertContains(fallbackLines, "primaryBoss=Fallback Boss visible=no fallback=yes encounterMatch=yes", "fallback boss status")
 
 print("ParseBuddy dump tests passed: " .. testsRun)

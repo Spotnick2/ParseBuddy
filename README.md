@@ -25,7 +25,7 @@ Equivalent effects will share one row. For example, Sunder Armor and Expose Armo
 
 ## Commands
 
-Milestones 4 and 5 add encounter lifecycle, boss tracking, and CLEU-driven live debuff rows. Missing groups remain gray during the pull grace period and turn red afterward. Active effects update immediately from combat-log aura events. If the client does not expose `boss1` through `boss5`, ParseBuddy can learn one fallback encounter target from the first tracked aura event; later debuffed GUIDs do not replace it. `/pb test` remains available.
+Milestones 4 and 5 add encounter lifecycle, boss tracking, and CLEU-driven live debuff rows. Missing groups remain gray during the pull grace period and turn red afterward. Active effects update immediately from combat-log aura events. If the client does not expose `boss1` through `boss5`, ParseBuddy can learn a provisional target from the first tracked aura event. A later destination whose localized name exactly matches the encounter name can replace that provisional target, while unrelated adds cannot. `/pb test` remains available.
 
 - `/pb` or `/parsebuddy`: show help
 - `/pb help`: show help

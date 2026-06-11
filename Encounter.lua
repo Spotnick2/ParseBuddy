@@ -146,8 +146,23 @@ function PB.Encounter:LearnBossFromCombatLog(guid, name)
         return false
     end
 
-    if self:HasVisibleBosses() or self.primaryVisibleBoss then
+    if self:HasVisibleBosses() then
         return false
+    end
+
+    local matchesEncounterName = name ~= nil
+        and name ~= ""
+        and self.encounter ~= nil
+        and name == self.encounter.name
+
+    if self.primaryVisibleBoss then
+        if not matchesEncounterName or self.primaryVisibleBoss.matchesEncounterName then
+            return false
+        end
+
+        local previousGUID = self.primaryVisibleBoss.guid
+        self.encounteredBosses[previousGUID] = nil
+        PB.State:ForgetBoss(previousGUID)
     end
 
     local boss = {
@@ -158,6 +173,7 @@ function PB.Encounter:LearnBossFromCombatLog(guid, name)
         unitToken = nil,
         lastUnitToken = nil,
         discoveredFromCombatLog = true,
+        matchesEncounterName = matchesEncounterName,
     }
     self.encounteredBosses[guid] = boss
     self.primaryVisibleBoss = boss
@@ -212,12 +228,13 @@ function PB.Encounter:BuildDumpLines()
     ))
     local primaryBoss = self.primaryVisibleBoss
     appendLine(lines, string.format(
-        "UI: mode=%s frameShown=%s primaryBoss=%s visible=%s fallback=%s",
+        "UI: mode=%s frameShown=%s primaryBoss=%s visible=%s fallback=%s encounterMatch=%s",
         tostring(uiMode),
         formatBool(frameShown),
         formatMaybe(primaryBoss and primaryBoss.name),
         formatBool(primaryBoss and primaryBoss.visible),
-        formatBool(primaryBoss and primaryBoss.discoveredFromCombatLog)
+        formatBool(primaryBoss and primaryBoss.discoveredFromCombatLog),
+        formatBool(primaryBoss and primaryBoss.matchesEncounterName)
     ))
 
     appendLine(lines, "Visible boss units:")

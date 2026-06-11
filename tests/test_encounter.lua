@@ -1,7 +1,9 @@
 ParseBuddy = {
     State = {
         resets = 0,
+        candidatesByBoss = {},
         ResetEncounter = function(self) self.resets = self.resets + 1 end,
+        ForgetBoss = function(self, bossGUID) self.candidatesByBoss[bossGUID] = nil end,
         EvaluateBoss = function() return { { state = "missing" } } end,
     },
     UI = {
@@ -92,18 +94,26 @@ local emptyProvider = {
     Name = function() return nil end,
 }
 
-Encounter:Start(101, "Fallback Encounter", 3, 10, emptyProvider)
+Encounter:Start(101, "Magtheridon", 4, 25, emptyProvider)
 assertEqual(Encounter.primaryVisibleBoss, nil, "no visible boss at fallback start")
-assertEqual(Encounter:LearnBossFromCombatLog("Creature-Z", "Fallback Boss"), true, "fallback boss learned from combat log")
-assertEqual(Encounter.primaryVisibleBoss.guid, "Creature-Z", "fallback boss becomes primary")
+assertEqual(Encounter:LearnBossFromCombatLog("Creature-Z", "Hellfire Channeler"), true, "channeler becomes provisional fallback")
+assertEqual(Encounter.primaryVisibleBoss.guid, "Creature-Z", "provisional fallback becomes primary")
 assertEqual(Encounter.encounteredBosses["Creature-Z"].discoveredFromCombatLog, true, "fallback flag recorded")
-assertEqual(Encounter:LearnBossFromCombatLog("Creature-Y", "Fallback Add"), false, "second fallback target is rejected")
+assertEqual(Encounter:LearnBossFromCombatLog("Creature-Y", "Hellfire Channeler"), false, "second channeler is rejected")
 assertEqual(Encounter.primaryVisibleBoss.guid, "Creature-Z", "fallback primary remains stable")
 
-Encounter:RefreshVisibleBosses(emptyProvider)
-assertEqual(Encounter.primaryVisibleBoss.guid, "Creature-Z", "combat-log fallback survives an empty boss scan")
+ParseBuddy.State.candidatesByBoss = { ["Creature-Z"] = { majorArmor = {} } }
+assertEqual(Encounter:LearnBossFromCombatLog("Creature-M", "Magtheridon"), true, "Magtheridon replaces provisional channeler")
+assertEqual(Encounter.primaryVisibleBoss.guid, "Creature-M", "encounter-name target becomes primary")
+assertEqual(Encounter.primaryVisibleBoss.matchesEncounterName, true, "encounter-name match recorded")
+assertEqual(Encounter.encounteredBosses["Creature-Z"], nil, "provisional fallback removed after promotion")
+assertEqual(ParseBuddy.State.candidatesByBoss["Creature-Z"], nil, "provisional fallback state removed after promotion")
+assertEqual(Encounter:LearnBossFromCombatLog("Creature-Y", "Hellfire Channeler"), false, "channeler cannot replace Magtheridon")
 
-Encounter:End(101, "Fallback Encounter", 3, 10, 1)
+Encounter:RefreshVisibleBosses(emptyProvider)
+assertEqual(Encounter.primaryVisibleBoss.guid, "Creature-M", "combat-log fallback survives an empty boss scan")
+
+Encounter:End(101, "Magtheridon", 4, 25, 1)
 Encounter:RefreshVisibleBosses(provider)
 assertEqual(#Encounter.visibleOrder, 0, "inactive refresh ignored")
 
