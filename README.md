@@ -4,6 +4,8 @@
 
 ParseBuddy is an MVP World of Warcraft addon for TBC Anniversary. The implementation milestones are complete; supervised in-game acceptance is still required before treating it as raid-ready.
 
+The AddOns settings entry currently presents a static UX prototype. Its controls use deterministic in-memory values and intentionally do not change or persist live addon settings yet.
+
 ## Core Concept
 
 ParseBuddy will provide a compact, real-time display of important boss debuff groups. It will help raiders notice missing, expiring, partial, or active effects during a pull without performing post-fight analytics or relying on external services.
@@ -30,7 +32,7 @@ Equivalent effects will share one row. For example, Sunder Armor and Expose Armo
 
 Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live debuff rows, known-duration expiration, and opportunistic visible-boss aura resync. Missing groups remain gray during the pull grace period and turn red afterward. Active effects update immediately from combat-log aura events. If the client does not expose `boss1` through `boss5`, ParseBuddy can learn a provisional non-friendly NPC target from the first tracked non-removal aura event. This includes neutral encounter targets such as Midnight while continuing to reject players, pets, guardians, and friendly NPCs. A later destination whose localized name exactly matches the encounter name can replace that provisional target. Previously visible or encounter-matched bosses take precedence over newly discovered adds and can reclaim the display from their combat-log activity. `/pb test` is blocked during active encounters so fake rows cannot replace live data.
 
-- `/pb` or `/parsebuddy`: show help
+- `/pb` or `/parsebuddy`: open the static configuration prototype
 - `/pb help`: show help
 - `/pb test`: show the deterministic test frame
 - `/pb mode problems`: use Problems Only during live encounters
@@ -80,6 +82,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 5. CLEU aura tracking for six MVP groups
 6. Complete: opportunistic boss aura resync and timer expiration
 7. Complete: debug tools, polish, and in-game acceptance checklist
+8. Complete: configuration UX discovery and static Blizzard settings prototype
 
 ## Non-Goals
 
@@ -91,6 +94,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 
 ## Not Yet Implemented
 
+- Wiring the configuration prototype to real global/personal settings and live addon behavior
 - Named profiles beyond the implemented global account scope and personal per-character scope
 - Additional optional debuff groups beyond Curse of Recklessness and boss-specific profiles
 - Multi-boss display sections
@@ -104,6 +108,10 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - The addon loads without Lua errors.
 - `/pb` and `/parsebuddy` both show help.
 - `/pb validate` reports the configured spell-ID total and identifies any IDs unavailable in the current client.
+- ParseBuddy appears under Game Menu -> Options -> AddOns. `/pb` opens the same category while `/pb help` still prints commands.
+- The configuration page clearly says `PROTOTYPE`, keeps version/scope visible above one scroll area, and has no custom tabs or Save/Apply button.
+- Prototype controls update deterministic local values only. They reset after `/reload` and do not modify `ParseBuddyDB`, `ParseBuddyCharDB`, the encounter frame, or live combat behavior.
+- Alert destination/delay/test controls visibly disable while prototype alerts are off, and Diagnostics starts collapsed.
 - `/pb test` shows seven deterministic green, yellow, red, and gray preview rows.
 - The frame can be dragged while unlocked.
 - The title-bar lock icon changes between locked and unlocked images and toggles dragging; `/pb lock` and `/pb unlock` provide the same behavior.

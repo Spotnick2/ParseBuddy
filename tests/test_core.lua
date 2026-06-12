@@ -41,6 +41,10 @@ ParseBuddy = {
         Print = function(self) self.prints = (self.prints or 0) + 1 end,
         SetAuto = function(self, value) self.auto = value end,
     },
+    ConfigPanel = {
+        Open = function(self) self.opens = (self.opens or 0) + 1 end,
+        Initialize = function() end,
+    },
 }
 
 CreateFrame = function()
@@ -61,6 +65,10 @@ local function assertEqual(actual, expected, message)
         error((message or "values differ") .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual), 2)
     end
 end
+
+ParseBuddy:HandleSlashCommand("")
+assertEqual(ParseBuddy.ConfigPanel.opens, 1, "empty slash command opens configuration panel")
+assertEqual(#ParseBuddy.messages, 0, "empty slash command no longer prints help")
 
 ParseBuddy:HandleSlashCommand("debugscan")
 assertEqual(ParseBuddy.Encounter.scans, 1, "debugscan slash command dispatches encounter scan")

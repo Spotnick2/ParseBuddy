@@ -18,7 +18,9 @@ function PB:HandleSlashCommand(message)
     local command, argument = input:match("^(%S+)%s*(.-)$")
     command = command or ""
 
-    if command == "" or command == "help" then
+    if command == "" then
+        PB.ConfigPanel:Open()
+    elseif command == "help" then
         showHelp()
     elseif command == "test" then
         PB.UI:ShowTestMode()
@@ -96,6 +98,7 @@ function PB:Initialize()
     registerSlashCommands()
     PB.UI:Initialize()
     PB.Events:Initialize()
+    PB.ConfigPanel:Initialize()
     PB:Debug("Initialized version " .. PB.version)
 end
 
