@@ -67,6 +67,16 @@ PB.DebuffLibrary = {
                 { displayName = "Thunder Clap", spellIds = { 6343, 8198, 8204, 8205, 11580, 11581, 25264 }, duration = 30 },
             },
         },
+        {
+            key = "recklessness",
+            label = "Armor Support",
+            missingText = "Curse of Recklessness",
+            required = true,
+            mode = "any",
+            spells = {
+                { displayName = "Recklessness", spellIds = { 704, 7658, 7659, 11717, 27226 }, duration = 120 },
+            },
+        },
     },
     groupsByKey = {},
     spellIdToGroupKey = {},

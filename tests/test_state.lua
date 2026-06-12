@@ -18,7 +18,7 @@ local function evaluate(groupKey, candidates, options)
     return State:EvaluateGroup(Library.groupsByKey[groupKey], candidates, options or { now = 100, warningThreshold = 5 })
 end
 
-assertEqual(#Library.groups, 6, "six MVP groups")
+assertEqual(#Library.groups, 7, "seven monitored groups")
 assertEqual(Library.spellIdToGroupKey[27228], "spellVulnerability", "CoE lookup")
 assertEqual(Library.spellIdToGroupKey[25225], "majorArmor", "Sunder lookup")
 assertEqual(Library.spellIdToGroupKey[26866], "majorArmor", "Expose lookup")
@@ -26,11 +26,19 @@ assertEqual(Library.spellIdToGroupKey[26993], "faerieFire", "Faerie Fire lookup"
 assertEqual(Library.spellIdToGroupKey[27164], "judgement", "Wisdom lookup")
 assertEqual(Library.spellIdToGroupKey[25203], "attackPower", "Demo Shout lookup")
 assertEqual(Library.spellIdToGroupKey[25264], "attackSpeed", "Thunder Clap lookup")
+assertEqual(Library.spellIdToGroupKey[27226], "recklessness", "Curse of Recklessness lookup")
 assertEqual(Library.spellsById[27228].duration, 300, "CoE known duration")
 assertEqual(Library.spellsById[25225].duration, 30, "Sunder known duration")
 assertEqual(Library.spellsById[26866].duration, nil, "variable Expose duration is scan-only")
+assertEqual(Library.spellsById[27226].duration, 120, "Curse of Recklessness known duration")
 
-local result = evaluate("majorArmor", {
+local result = evaluate("recklessness", {
+    { spellId = 27226, sourceName = "Warlock", sourceGUID = "W", active = true, expiresAt = 180 },
+})
+assertEqual(result.state, "active", "Curse of Recklessness satisfies its own group")
+assertEqual(result.spell.displayName, "Recklessness", "Curse of Recklessness display name")
+
+result = evaluate("majorArmor", {
     { spellId = 25225, sourceName = "Tank", sourceGUID = "B", active = true, stacks = 3, expiresAt = 120 },
 })
 assertEqual(result.state, "partial", "Sunder below five stacks")

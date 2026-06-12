@@ -202,6 +202,9 @@ function PB.State:CreateTestEvaluations()
         attackSpeed = {
             { spellId = 25264, sourceName = "Tankname", sourceGUID = "Player-Test-2", active = true, expiresAt = now + 18 },
         },
+        recklessness = {
+            { spellId = 27226, sourceName = "Warlockname", sourceGUID = "Player-Test-4", active = true, expiresAt = now + 86 },
+        },
     }
     local options = {
         attackPower = { enabled = false },

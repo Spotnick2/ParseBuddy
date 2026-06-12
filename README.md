@@ -18,6 +18,7 @@ Equivalent effects will share one row. For example, Sunder Armor and Expose Armo
 - Judgement
 - Attack Power Reduction
 - Attack Speed Slow
+- Curse of Recklessness armor support
 - Full List and Problems Only display modes
 - Boss encounter display with visible-boss preference and a combat-log fallback when no boss unit is exposed
 - Source player, stack, and timer information when available
@@ -35,6 +36,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - `/pb clear`: clear the in-memory and persisted diagnostic snapshot
 - `/pb debugscan`: rescan tracked debuffs on currently visible `boss1` through `boss5` units
 - `/pb validate`: verify every configured spell ID with the current client spell APIs
+- Title-bar lock icon: toggle between movable and locked states
 - `/pb lock`: lock the frame position
 - `/pb unlock`: allow the frame to be dragged
 - `/pb reset`: reset the frame to screen center and scale `1.00`
@@ -66,7 +68,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 
 - Profiles and per-group enable, required, and optional settings
 - Problems Only versus Full List behavior
-- Additional optional debuff groups and boss-specific profiles
+- Additional optional debuff groups beyond Curse of Recklessness and boss-specific profiles
 - Multi-boss display sections
 - Sounds, raid warnings, whispers, assignments, and import/export
 - Optional post-encounter debuff uptime summary based only on ParseBuddy's in-memory live encounter state:
@@ -82,16 +84,16 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - The addon loads without Lua errors.
 - `/pb` and `/parsebuddy` both show help.
 - `/pb validate` reports the configured spell-ID total and identifies any IDs unavailable in the current client.
-- `/pb test` shows six green, yellow, red, and gray preview rows.
+- `/pb test` shows seven deterministic green, yellow, red, and gray preview rows.
 - The frame can be dragged while unlocked.
-- `/pb lock` prevents dragging and `/pb unlock` restores it.
+- The title-bar lock icon changes between locked and unlocked images and toggles dragging; `/pb lock` and `/pb unlock` provide the same behavior.
 - Frame position and lock state persist after `/reload`.
 - `/pb reset` returns the frame to screen center at scale and opacity `1.00`.
 - `/pb scale 0.6` and `/pb scale 1.4` resize the compact frame and persist after `/reload`.
 - `/pb opacity 0.5` makes the frame translucent and persists after `/reload`.
 - The close button hides the test frame.
-- `/pb test` still shows the same six scenarios after the data/evaluator refactor.
-- Starting a supported encounter shows the primary boss and all six live group rows. Visible `bossN` units are preferred, but a tracked combat-log boss target can seed the display when no unit is exposed.
+- `/pb test` renders all seven monitored groups from deterministic evaluator state.
+- Starting a supported encounter shows the primary boss and all seven live group rows. Visible `bossN` units are preferred, but a tracked combat-log boss target can seed the display when no unit is exposed.
 - Missing groups are gray during pull grace and red afterward.
 - Applying, refreshing, stacking, or removing a tracked boss debuff updates its group row immediately.
 - Known-duration rows count down, turn yellow at the warning threshold, and become missing after expiration without requiring a removal event.
@@ -109,9 +111,9 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 Run these checks after `/reload` with Lua errors enabled:
 
 1. Run `/pb validate`. Record any missing IDs; expected client-specific failures must be investigated before the row is trusted.
-2. Run `/pb test`, verify all six deterministic rows, then close and reopen it.
+2. Run `/pb test`, verify all seven deterministic rows, including Curse of Recklessness, then close and reopen it.
 3. Verify unlock, drag, lock, scale, `/pb reset`, and persistence across another `/reload`.
-4. On a normal `boss1` encounter, verify the title, grace period, all six rows, source names, Sunder stacks, warning colors, and countdowns.
+4. On a normal `boss1` encounter, verify the title, grace period, all seven rows, source names, Sunder stacks, warning colors, and countdowns.
 5. Apply and remove each available tracked debuff. Confirm CLEU changes appear immediately and known timers expire without requiring a removal event.
 6. Run `/pb debugscan` while the boss is visible. Confirm the boss count and tracked-aura count match the frame.
 7. Run `/pb dump`. Confirm the primary GUID, scan reason, candidate expiration source, and visible evaluations match the boss.

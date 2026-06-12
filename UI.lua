@@ -12,6 +12,8 @@ local MIN_SCALE = 0.6
 local MAX_SCALE = 1.4
 local MIN_OPACITY = 0.2
 local MAX_OPACITY = 1
+local LOCKED_TEXTURE = "Interface\\Buttons\\LockButton-Locked-Up"
+local UNLOCKED_TEXTURE = "Interface\\Buttons\\LockButton-Unlocked-Up"
 
 local STATE_COLORS = {
     active = { 0.08, 0.42, 0.12, 0.92 },
@@ -198,6 +200,30 @@ function PB.UI:CreateFrame()
     frame.closeButton = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
     frame.closeButton:SetPoint("TOPRIGHT", -3, -3)
 
+    frame.lockButton = CreateFrame("Button", nil, frame)
+    frame.lockButton:SetSize(20, 20)
+    frame.lockButton:SetPoint("RIGHT", frame.closeButton, "LEFT", -2, 0)
+    frame.lockButton:SetScript("OnClick", function()
+        if ParseBuddyDB.frame.locked then
+            PB.UI:Unlock()
+        else
+            PB.UI:Lock()
+        end
+    end)
+    frame.lockButton:SetScript("OnEnter", function(button)
+        if not GameTooltip then
+            return
+        end
+        GameTooltip:SetOwner(button, "ANCHOR_RIGHT")
+        GameTooltip:SetText(ParseBuddyDB.frame.locked and "Unlock ParseBuddy" or "Lock ParseBuddy")
+        GameTooltip:Show()
+    end)
+    frame.lockButton:SetScript("OnLeave", function()
+        if GameTooltip then
+            GameTooltip:Hide()
+        end
+    end)
+
     frame.rows = {}
     local index
     for index = 1, rowCount do
@@ -250,8 +276,10 @@ function PB.UI:UpdateLockDisplay()
         return
     end
 
-    local suffix = ParseBuddyDB.frame.locked and " |cffaaaaaa[Locked]|r" or " |cff66ff66[Unlocked]|r"
-    self.frame.title:SetText("ParseBuddy" .. suffix)
+    self.frame.title:SetText("ParseBuddy")
+    if self.frame.lockButton then
+        self.frame.lockButton:SetNormalTexture(ParseBuddyDB.frame.locked and LOCKED_TEXTURE or UNLOCKED_TEXTURE)
+    end
 end
 
 function PB.UI:SetRowsVisible(visible)

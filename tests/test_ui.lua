@@ -91,6 +91,21 @@ assertEqual(alpha, 0.45, "opacity setting applies immediately")
 ParseBuddy.UI:SetOpacity("0.10")
 assertEqual(ParseBuddyDB.frame.opacity, 0.45, "invalid opacity does not change setting")
 
+local titleText
+local lockTexture
+ParseBuddy.UI.frame = {
+    SetAlpha = function(_, value) alpha = value end,
+    title = { SetText = function(_, value) titleText = value end },
+    lockButton = { SetNormalTexture = function(_, value) lockTexture = value end },
+}
+ParseBuddyDB.frame.locked = true
+ParseBuddy.UI:UpdateLockDisplay()
+assertEqual(titleText, "ParseBuddy", "lock state is not embedded in title text")
+assertEqual(lockTexture, "Interface\\Buttons\\LockButton-Locked-Up", "locked texture is shown")
+ParseBuddyDB.frame.locked = false
+ParseBuddy.UI:UpdateLockDisplay()
+assertEqual(lockTexture, "Interface\\Buttons\\LockButton-Unlocked-Up", "unlocked texture is shown")
+
 ParseBuddyDB.frame.point = "TOPLEFT"
 ParseBuddyDB.frame.relativePoint = "TOPLEFT"
 ParseBuddyDB.frame.x = 20
