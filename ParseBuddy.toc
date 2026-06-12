@@ -4,7 +4,7 @@
 ## Title: ParseBuddy
 ## Notes: Your wingman for cleaner raid parses.
 ## Author: TODO
-## Version: 0.1.7.9
+## Version: 0.1.7.10
 ## SavedVariables: ParseBuddyDB
 ## SavedVariablesPerCharacter: ParseBuddyCharDB
 
@@ -13,6 +13,8 @@ Defaults.lua
 Debug.lua
 UI.lua
 DebuffLibrary.lua
+CapabilityLibrary.lua
+Roster.lua
 EncounterTargets.lua
 State.lua
 Summary.lua

@@ -18,6 +18,17 @@ local function evaluate(groupKey, candidates, options)
     return State:EvaluateGroup(Library.groupsByKey[groupKey], candidates, options or { now = 100, warningThreshold = 5 })
 end
 
+local unavailable = evaluate("judgement", {}, { now = 100, warningThreshold = 5, enabled = true, required = true, capability = "notAvailable" })
+assertEqual(unavailable.state, "notAvailable", "missing group becomes not available when cached capability is absent")
+local unknownCapability = evaluate("judgement", {}, { now = 100, warningThreshold = 5, enabled = true, required = true, capability = "unknown" })
+assertEqual(unknownCapability.state, "missing", "unknown capability preserves missing state")
+local activeDespiteUnavailable = evaluate("judgement", {
+    { spellId = 27164, sourceName = "Paladin", active = true, expiresAt = 120 },
+}, { now = 100, warningThreshold = 5, enabled = true, required = true, capability = "notAvailable" })
+assertEqual(activeDespiteUnavailable.state, "active", "active candidate takes precedence over roster capability")
+local testEvaluations = State:CreateTestEvaluations()
+assertEqual(testEvaluations[5].state, "notAvailable", "deterministic test mode includes a not-available example")
+
 assertEqual(#Library.groups, 7, "seven monitored groups")
 assertEqual(Library.spellIdToGroupKey[27228], "spellVulnerability", "CoE lookup")
 assertEqual(Library.spellIdToGroupKey[25225], "majorArmor", "Sunder lookup")

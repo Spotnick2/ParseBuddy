@@ -16,7 +16,7 @@ local function requiredText(value)
 end
 
 function PB.Config:Initialize()
-    ParseBuddyDB.schemaVersion = 2
+    ParseBuddyDB.schemaVersion = 3
     ParseBuddyDB.settings = ParseBuddyDB.settings or {}
     if ParseBuddyDB.settings.displayMode == nil and ParseBuddyDB.displayMode ~= nil then
         ParseBuddyDB.settings.displayMode = ParseBuddyDB.displayMode
@@ -24,7 +24,7 @@ function PB.Config:Initialize()
     PB.Defaults:ApplySettings(ParseBuddyDB.settings)
 
     ParseBuddyCharDB = ParseBuddyCharDB or {}
-    ParseBuddyCharDB.schemaVersion = 1
+    ParseBuddyCharDB.schemaVersion = 2
     if not VALID_SCOPES[ParseBuddyCharDB.activeScope] then
         ParseBuddyCharDB.activeScope = "global"
     end
@@ -72,6 +72,32 @@ end
 
 function PB.Config:SetDisplayMode(displayMode)
     self:GetSettings().displayMode = displayMode
+end
+
+function PB.Config:GetShowUnavailable()
+    return self:GetSettings().showUnavailable == true
+end
+
+function PB.Config:SetShowUnavailable(show)
+    self:GetSettings().showUnavailable = show == true
+end
+
+function PB.Config:HandleUnavailableCommand(value)
+    value = value and value:lower() or ""
+    if value == "show" then
+        self:SetShowUnavailable(true)
+    elseif value == "hide" then
+        self:SetShowUnavailable(false)
+    elseif value ~= "" then
+        PB:Print("Unavailable must be 'show' or 'hide'.")
+        return false
+    end
+
+    PB:Print("Unavailable rows in Problems Only: " .. (self:GetShowUnavailable() and "shown" or "hidden") .. " (" .. self:GetScope() .. ").")
+    if value ~= "" and PB.Encounter and PB.Encounter.active then
+        PB.Encounter:RefreshDisplay()
+    end
+    return true
 end
 
 function PB.Config:ResolveGroupKey(value)

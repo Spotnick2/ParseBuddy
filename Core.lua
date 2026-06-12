@@ -10,7 +10,7 @@ local function trim(value)
 end
 
 local function showHelp()
-    PB:Print("Commands: /pb help, test, mode [problems|full], profile [global|personal], groups, group <key> [enable|disable|required|optional], targets, summary [auto on|off], dump, snapshot, clear, debugscan, validate, lock, unlock, reset, scale [0.6-1.4], opacity [0.2-1.0], debug")
+    PB:Print("Commands: /pb help, test, mode [problems|full], unavailable [show|hide], profile [global|personal], groups, group <key> [enable|disable|required|optional], roster, targets, summary [auto on|off], dump, snapshot, clear, debugscan, validate, lock, unlock, reset, scale [0.6-1.4], opacity [0.2-1.0], debug")
 end
 
 function PB:HandleSlashCommand(message)
@@ -26,12 +26,16 @@ function PB:HandleSlashCommand(message)
         PB.UI:SetDisplayMode(argument)
     elseif command == "profile" then
         PB.Config:SetScope(argument)
+    elseif command == "unavailable" then
+        PB.Config:HandleUnavailableCommand(argument)
     elseif command == "group" then
         PB.Config:HandleGroupCommand(argument)
     elseif command == "groups" then
         PB.Config:PrintGroups()
     elseif command == "targets" then
         PB.Encounter:PrintTargets()
+    elseif command == "roster" then
+        PB.Roster:Print()
     elseif command == "summary" then
         local summaryCommand, summaryValue = argument:match("^(%S*)%s*(.-)$")
         if summaryCommand == "auto" then

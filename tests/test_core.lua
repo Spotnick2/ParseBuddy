@@ -31,6 +31,10 @@ ParseBuddy = {
         SetScope = function(self, value) self.scope = value end,
         HandleGroupCommand = function(self, value) self.groupCommand = value end,
         PrintGroups = function(self) self.groupsPrinted = (self.groupsPrinted or 0) + 1 end,
+        HandleUnavailableCommand = function(self, value) self.unavailable = value end,
+    },
+    Roster = {
+        Print = function(self) self.prints = (self.prints or 0) + 1 end,
     },
     Summary = {
         Print = function(self) self.prints = (self.prints or 0) + 1 end,
@@ -89,6 +93,14 @@ assertEqual(ParseBuddy.Config.groupsPrinted, 1, "groups slash command lists sett
 ParseBuddy:HandleSlashCommand("help")
 assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "profile", 1, true) ~= nil, true, "help lists profile scope")
 assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "group", 1, true) ~= nil, true, "help lists group commands")
+
+ParseBuddy:HandleSlashCommand("unavailable show")
+assertEqual(ParseBuddy.Config.unavailable, "show", "unavailable slash command dispatches scoped setting")
+ParseBuddy:HandleSlashCommand("roster")
+assertEqual(ParseBuddy.Roster.prints, 1, "roster slash command prints cached diagnostics")
+ParseBuddy:HandleSlashCommand("help")
+assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "unavailable", 1, true) ~= nil, true, "help lists unavailable setting")
+assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "roster", 1, true) ~= nil, true, "help lists roster diagnostics")
 
 ParseBuddy:HandleSlashCommand("summary")
 assertEqual(ParseBuddy.Summary.prints, 1, "summary slash command prints latest summary")

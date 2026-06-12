@@ -29,6 +29,8 @@ Tagline: "Your wingman for cleaner raid parses."
 - Aura scans will supplement CLEU only for duration, expiration, stack confirmation, and late-load recovery.
 - Completed diagnostic snapshots preserve final raw candidates separately from one bounded last-meaningful live evaluation view. Terminal aura-removal cleanup must not overwrite that retained live view.
 - Live display filtering is a UI concern. Problems Only hides healthy active rows and shows required missing/grace, partial, expiring, and unknown-source rows; Full List shows every enabled group. Test mode and diagnostics remain unfiltered.
+- Roster capability is class-based and cached only on `PLAYER_ENTERING_WORLD`, `GROUP_ROSTER_UPDATE`, and encounter start. Never scan roster units from CLEU, the display ticker, evaluation, or UI rendering. A complete roster with no baseline provider yields `notAvailable`; incomplete data yields `unknown`; observed active effects always take precedence.
+- Do not infer talents, specs, improved effects, learned ranks, assignments, or responsibility from class presence. `NOT AVAILABLE` is informational and hidden by default in Problems Only through a scoped setting; Full List always shows enabled unavailable groups.
 - Global settings use `ParseBuddyDB.settings`; per-character personal settings use `ParseBuddyCharDB.settings`, selected by `ParseBuddyCharDB.activeScope`. Frame position, scale, opacity, and lock state remain account-wide in `ParseBuddyDB.frame`.
 - Personal settings are copied from current global settings only on first selection. Scope switching must preserve both stores without merging or overwriting later edits.
 - The encounter summary is group-level, single-primary, and memory-only. It accrues satisfied, partial, and missing intervals after grace from evaluator transitions; it must not retain raw CLEU history, score players, scan auras, or persist summaries across reloads.
@@ -87,6 +89,8 @@ Do not implement more than the requested milestone. The first priorities are add
 - `Debug.lua`: addon-prefixed and conditional debug output, including dump helpers.
 - `UI.lua`: frame, compact row rendering, display-mode filtering, movement, lock state, and test mode.
 - `DebuffLibrary.lua`: static group definitions and spell-ID lookup tables.
+- `CapabilityLibrary.lua`: static group-to-baseline-provider-class mappings only.
+- `Roster.lua`: low-frequency solo/party/raid roster cache, capability evaluation, and `/pb roster` diagnostics.
 - `EncounterTargets.lua`: static encounter-ID to NPC-ID target registry and Lua 5.1-compatible Creature/Vehicle GUID parsing.
 - `State.lua`: encounter candidate state, deterministic group evaluation, known-duration expiry, and injectable single-unit aura resync.
 - `Summary.lua`: frozen encounter settings and in-memory group-level uptime interval accounting and output.
@@ -108,6 +112,7 @@ Verify the TOC Interface against the installed TBC Anniversary client before rel
 - `/pb opacity 0.2-1.0` changes the persisted alpha of the whole frame; `/pb reset` restores opacity to `1.0` with position and scale.
 - `/pb mode problems|full` changes the persisted live encounter display mode. `/pb test` must remain deterministic and unfiltered.
 - `/pb profile global|personal`, `/pb groups`, and `/pb group <key> ...` manage scoped settings. Stable group keys are part of the command contract.
+- `/pb unavailable show|hide` controls the scoped Problems Only visibility of `NOT AVAILABLE` rows; `/pb roster` prints the cache and must not refresh it.
 - `/pb snapshot` prints the automatically captured diagnostic snapshot from the most recently completed encounter.
 - `/pb clear` clears both `ParseBuddy.lastEncounterSnapshot` and `ParseBuddyDB.lastEncounterSnapshot`.
 - `/pb summary` prints the latest in-memory summary; `/pb summary auto on|off` controls account-wide automatic output, off by default. `/pb clear` also clears the completed summary without stopping an active accumulator.
@@ -124,5 +129,4 @@ Verify the TOC Interface against the installed TBC Anniversary client before rel
 ## Deferred Optional Features
 
 - Multiple boss UI sections, multi-boss summary aggregation, a graphical summary window, historical summaries, and persistence remain deferred. Do not turn summaries into player scoring, blame, ranking, or a full post-raid parser.
-- Roster-aware group availability may later distinguish `NOT AVAILABLE` from `MISSING`. Compute capability from roster/class metadata on roster changes or other low-frequency events, never by scanning the raid in CLEU or on the display ticker. Treat talent/spec/rank-dependent effects as unknown unless reliable evidence exists; do not infer Improved Faerie Fire, Malediction, improved Demo Shout/Thunder Clap, or assignments from class presence alone.
 - Missing-debuff broadcasts may later be added only as an opt-in, off-by-default feature. Support explicit party, raid, or leader destinations; respect channel permissions; use pull/grace delays, transition-based deduplication, and per-group/global cooldowns; and never produce repeated raid/whisper spam from the ticker or CLEU hot path.

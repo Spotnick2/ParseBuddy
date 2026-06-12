@@ -155,8 +155,9 @@ function PB.State:EvaluateGroup(group, candidates, options)
     if not best or best.kind == "recent" then
         return {
             group = group,
-            state = "missing",
+            state = options.capability == "notAvailable" and "notAvailable" or "missing",
             required = options.required,
+            capability = options.capability or "unknown",
             recentCandidate = best and best.candidate or nil,
             sourceKnown = false,
         }
@@ -182,6 +183,8 @@ function PB.State:EvaluateGroups(candidatesByGroup, optionsByGroup, sharedOption
             now = groupOptions.now or (sharedOptions and sharedOptions.now) or 0,
             warningThreshold = groupOptions.warningThreshold or (sharedOptions and sharedOptions.warningThreshold) or 5,
             enabled = groupOptions.enabled,
+            required = groupOptions.required,
+            capability = groupOptions.capability,
         }
         evaluations[index] = self:EvaluateGroup(group, candidatesByGroup and candidatesByGroup[group.key] or {}, options)
     end
@@ -210,7 +213,7 @@ function PB.State:CreateTestEvaluations()
         },
     }
     local options = {
-        attackPower = { enabled = false },
+        attackPower = { enabled = true, required = true, capability = "notAvailable" },
     }
     return self:EvaluateGroups(candidates, options, { now = now, warningThreshold = 5 })
 end
@@ -426,6 +429,7 @@ function PB.State:EvaluateBoss(bossGUID, now, warningThreshold, graceActive, set
                 warningThreshold = warningThreshold,
                 enabled = groupSettings.enabled,
                 required = groupSettings.required,
+                capability = PB.Roster and PB.Roster:GetGroupCapability(group.key) or "unknown",
             }
         )
         if graceActive and evaluation.state == "missing" then

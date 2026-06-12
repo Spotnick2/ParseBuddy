@@ -14,6 +14,7 @@ ParseBuddy = {
         GetDisplayMode = function() return ParseBuddyDB.displayMode end,
         SetDisplayMode = function(_, value) ParseBuddyDB.displayMode = value end,
         GetScope = function() return "global" end,
+        GetShowUnavailable = function() return ParseBuddyDB.showUnavailable == true end,
     },
 }
 
@@ -147,6 +148,12 @@ assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("grace", true, false, "
 assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("disabled", true, false, "Disabled"), "FULL_LIST"), false, "disabled row hidden in full mode")
 assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("missing", false, false, "Optional"), "FULL_LIST"), true, "enabled optional missing row shown in full mode")
 assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("active", true, true, "Healthy"), "FULL_LIST"), true, "healthy row shown in full mode")
+assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("notAvailable", true, false, "Unavailable"), "PROBLEMS_ONLY", false), false, "unavailable row hidden by default in problems mode")
+assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("notAvailable", false, false, "Unavailable"), "PROBLEMS_ONLY", true), true, "scoped setting shows unavailable row in problems mode")
+assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("notAvailable", true, false, "Unavailable"), "FULL_LIST", false), true, "full mode always shows unavailable row")
+local unavailableRow = ParseBuddy.UI:EvaluationToRowData(evaluation("notAvailable", true, false, "Unavailable"))
+assertEqual(unavailableRow.status, "NOT AVAILABLE", "unavailable evaluation uses explicit status")
+assertEqual(unavailableRow.state, "notAvailable", "unavailable evaluation uses gray display state")
 
 local rendered = {}
 local rowShows = { 0, 0, 0, 0 }
@@ -168,6 +175,7 @@ ParseBuddy.UI.ApplyRowData = function(_, targetRow, rowData)
     rendered[#rendered + 1] = { row = targetRow, group = rowData.group }
 end
 ParseBuddyDB.displayMode = "PROBLEMS_ONLY"
+ParseBuddyDB.showUnavailable = false
 local compactEvaluations = {
     evaluation("active", true, true, "Healthy One"),
     evaluation("missing", true, false, "Missing"),

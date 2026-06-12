@@ -23,6 +23,7 @@ local STATE_COLORS = {
     missing = { 0.50, 0.07, 0.07, 0.92 },
     disabled = { 0.20, 0.20, 0.20, 0.92 },
     grace = { 0.20, 0.20, 0.20, 0.92 },
+    notAvailable = { 0.20, 0.20, 0.20, 0.92 },
 }
 
 local BACKDROP = {
@@ -166,6 +167,9 @@ function PB.UI:EvaluationToRowData(evaluation)
     elseif state == "missing" then
         effect = group.missingText .. " missing"
         status = "MISSING"
+    elseif state == "notAvailable" then
+        effect = group.missingText .. " unavailable"
+        status = "NOT AVAILABLE"
     else
         effect = spell.displayName
         if spell.requiredStacks then
@@ -303,13 +307,17 @@ function PB.UI:SetRowsVisible(visible)
     end
 end
 
-function PB.UI:IsEvaluationVisible(evaluation, displayMode)
+function PB.UI:IsEvaluationVisible(evaluation, displayMode, showUnavailable)
     if not evaluation or evaluation.state == "disabled" then
         return false
     end
 
     if displayMode == DISPLAY_MODE_FULL then
         return true
+    end
+
+    if evaluation.state == "notAvailable" then
+        return showUnavailable == true
     end
 
     if evaluation.state == "partial" or evaluation.state == "expiring" then
@@ -327,12 +335,13 @@ end
 function PB.UI:RenderEvaluations(evaluations, showAll)
     local frame = self:CreateFrame()
     local displayMode = PB.Config and PB.Config:GetDisplayMode() or ParseBuddyDB.displayMode
+    local showUnavailable = PB.Config and PB.Config:GetShowUnavailable() or false
     local visibleCount = 0
     local index
 
     for index = 1, #(evaluations or {}) do
         local evaluation = evaluations[index]
-        if showAll or self:IsEvaluationVisible(evaluation, displayMode) then
+        if showAll or self:IsEvaluationVisible(evaluation, displayMode, showUnavailable) then
             visibleCount = visibleCount + 1
             self:ApplyRowData(frame.rows[visibleCount], self:EvaluationToRowData(evaluation))
             setRowVisible(frame.rows[visibleCount], true)

@@ -55,6 +55,13 @@ ParseBuddy = {
             return true
         end,
     },
+    Roster = {
+        refreshes = 0,
+        Refresh = function(self, reason)
+            self.refreshes = self.refreshes + 1
+            self.reason = reason
+        end,
+    },
 }
 
 COMBATLOG_OBJECT_TYPE_NPC = 0x800
@@ -71,10 +78,12 @@ local NEUTRAL_NPC_FLAGS = 0x828
 local FRIENDLY_NPC_FLAGS = 0x818
 local HOSTILE_PLAYER_FLAGS = 0x448
 
+local registeredEvents = {}
+local eventHandler
 CreateFrame = function()
     return {
-        RegisterEvent = function() end,
-        SetScript = function() end,
+        RegisterEvent = function(_, event) registeredEvents[event] = true end,
+        SetScript = function(_, _, handler) eventHandler = handler end,
     }
 end
 
@@ -115,6 +124,7 @@ assertEqual(ParseBuddy.Encounter.refreshed, 1, "visible boss refreshes display")
 assertEqual(ParseBuddy.Encounter.lastScanReason, "cleu", "relevant CLEU event triggers opportunistic scan")
 assertEqual(ParseBuddy.Encounter.relevant, 1, "tracked boss event increments diagnostics")
 assertEqual(ParseBuddy.Encounter.meaningfulCaptures, 1, "tracked state change records live diagnostics")
+assertEqual(ParseBuddy.Roster.refreshes, 0, "CLEU handling uses cached roster without refreshing it")
 
 ParseBuddy.Encounter.visibleMode = false
 currentEvent = { 100, "SPELL_AURA_REMOVED", false, "Player", "Tank", 0, 0, "Removed-GUID", "Removed Target", HOSTILE_NPC_FLAGS, 0, 25225, "Sunder Armor", 1, "DEBUFF" }
@@ -150,5 +160,16 @@ currentEvent = { 102, "SPELL_AURA_REMOVED", false, "Player", "Tank", 0, 0, "Fall
 Events:HandleCombatLogEvent()
 assertEqual(ParseBuddy.Encounter.lastIgnoredSpellId, 25225, "full removal excludes stale same-frame aura from resync")
 assertEqual(ParseBuddy.Encounter.removalPreparations, 1, "full removal preserves pre-removal diagnostics")
+
+Events:Initialize()
+assertEqual(registeredEvents.PLAYER_ENTERING_WORLD, true, "player entering world refresh event registered")
+assertEqual(registeredEvents.GROUP_ROSTER_UPDATE, true, "group roster refresh event registered")
+eventHandler(nil, "PLAYER_ENTERING_WORLD")
+assertEqual(ParseBuddy.Roster.reason, "playerEnteringWorld", "player entering world refreshes roster cache")
+eventHandler(nil, "GROUP_ROSTER_UPDATE")
+assertEqual(ParseBuddy.Roster.reason, "groupRosterUpdate", "group roster update refreshes roster cache")
+ParseBuddy.Encounter.Start = function() end
+eventHandler(nil, "ENCOUNTER_START", 1, "Boss", 3, 10)
+assertEqual(ParseBuddy.Roster.reason, "encounterStart", "encounter start refreshes roster cache")
 
 print("ParseBuddy Events tests passed: " .. testsRun)

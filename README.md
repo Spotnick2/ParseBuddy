@@ -20,6 +20,7 @@ Equivalent effects will share one row. For example, Sunder Armor and Expose Armo
 - Attack Speed Slow
 - Curse of Recklessness armor support
 - Full List and Problems Only display modes
+- Cached solo, party, and raid class capability checks for `NOT AVAILABLE` rows
 - Boss encounter display with visible-boss preference and a combat-log fallback when no boss unit is exposed
 - Source player, stack, and timer information when available
 - Dependency-free, event-driven combat handling
@@ -34,6 +35,9 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - `/pb mode problems`: use Problems Only during live encounters
 - `/pb mode full`: use Full List during live encounters
 - `/pb mode`: show the current display mode
+- `/pb unavailable`: show whether Problems Only displays non-actionable `NOT AVAILABLE` rows
+- `/pb unavailable show`: show `NOT AVAILABLE` rows in Problems Only for the active settings scope
+- `/pb unavailable hide`: hide `NOT AVAILABLE` rows in Problems Only; this is the default
 - `/pb profile`: show whether this character uses global or personal settings
 - `/pb profile global`: use account-wide display and group settings
 - `/pb profile personal`: use this character's settings; the first selection copies current global settings
@@ -45,6 +49,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - `/pb summary auto on`: automatically print the summary when an encounter ends
 - `/pb summary auto off`: disable automatic summary output; this is the account-wide default
 - `/pb targets`: print configured encounter NPC IDs, accepted GUIDs, current primary, and selection reason
+- `/pb roster`: print the cached roster members/classes and capability result for each group
 - `/pb dump`: print explicitly labeled live diagnostics, or the completed snapshot when no encounter is active
 - `/pb snapshot`: print the automatically captured diagnostic snapshot from the most recently completed encounter
 - `/pb clear`: clear the in-memory and persisted diagnostic snapshot
@@ -85,11 +90,6 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - Multi-boss display sections
 - Sounds, raid warnings, whispers, assignments, and import/export
 - Multiple simultaneous boss UI sections, multi-boss uptime aggregation, and a graphical summary window
-- Roster-aware debuff availability:
-  - infer whether any current party or raid member's class can provide an enabled debuff group
-  - show `NOT AVAILABLE` instead of `MISSING` when no roster member can provide any equivalent effect in the group
-  - keep talent-dependent effects conservative; class presence alone must not claim a talent, spec, learned rank, or assignment is available
-  - refresh availability outside the CLEU hot path when the roster changes, not through repeated in-combat raid scans
 - Optional missing-debuff broadcasts, disabled by default:
   - configurable delay after pull/grace before announcing a required missing debuff
   - selectable destination such as party, raid, or group leader
@@ -114,6 +114,10 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - `/pb test` renders all seven monitored groups from deterministic evaluator state.
 - Problems Only is the persisted default and hides healthy active rows while showing required missing/grace, partial, expiring, and unknown-source rows.
 - Full List shows every enabled group, including healthy active rows.
+- Roster availability is cached only on entering the world, roster changes, and encounter start. CLEU, the display ticker, and UI rendering never scan the roster.
+- Missing or grace rows become gray `NOT AVAILABLE` when a complete cached roster has no baseline provider class. Incomplete roster information remains `unknown` and preserves normal missing/grace behavior.
+- Active, partial, and expiring rows remain authoritative regardless of cached capability. ParseBuddy does not infer talents, specs, learned ranks, assignments, or player responsibility.
+- Problems Only hides `NOT AVAILABLE` by default; `/pb unavailable show|hide` is scoped with global/personal settings. Full List always shows enabled unavailable rows.
 - `/pb mode problems` and `/pb mode full` switch immediately during an encounter and persist after `/reload`.
 - Filtered rows compact without gaps, unused row slots stay hidden, and the frame height follows the visible row count.
 - Global display/group settings live in `ParseBuddyDB`; personal display/group settings live in `ParseBuddyCharDB`.
@@ -148,13 +152,13 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 Run these checks after `/reload` with Lua errors enabled:
 
 1. Run `/pb validate`. Record any missing IDs; expected client-specific failures must be investigated before the row is trusted.
-2. Run `/pb test` in both saved display modes. Verify all seven deterministic rows remain visible because test mode deliberately bypasses live filtering.
+2. Run `/pb test` in both saved display modes. Verify all seven deterministic rows remain visible because test mode deliberately bypasses live filtering, including the gray `NOT AVAILABLE` example.
 3. Verify unlock, drag, lock, scale, `/pb reset`, and persistence across another `/reload`.
 4. Run `/pb profile`, `/pb groups`, and `/pb group recklessness`. Verify the default is global and Recklessness is enabled/optional.
 5. Set a distinctive global mode/group combination, switch to personal, and verify it was copied. Change the personal settings, switch back to global, and confirm the global values were preserved. Reload and verify the selected scope and both settings stores persist.
 6. On a normal `boss1` encounter, use `/pb mode full` and verify every enabled row, source names, Sunder stacks, warning colors, and countdowns.
 7. Disable a group and verify it disappears from both modes. Mark another group optional and verify its missing/grace row disappears only in Problems Only while partial, expiring, or unknown-source states remain visible.
-8. Use `/pb mode problems`. Verify healthy green rows disappear; required missing/grace, partial, expiring, and unknown-source rows remain; and the frame compacts without stale rows.
+8. Use `/pb mode problems`. Verify healthy green rows disappear; required missing/grace, partial, expiring, and unknown-source rows remain; unavailable rows are hidden by default; and the frame compacts without stale rows. Toggle `/pb unavailable show` and verify gray unavailable rows appear without affecting Full List.
 9. Apply and remove each available tracked debuff. Confirm CLEU changes appear immediately and known timers expire without requiring a removal event.
 10. Run `/pb debugscan` while the boss is visible. Confirm the boss count and tracked-aura count match the frame.
 11. Run `/pb dump`. Confirm the primary GUID, scan reason, candidate expiration source, and visible evaluations match the boss.
@@ -167,6 +171,7 @@ Run these checks after `/reload` with Lua errors enabled:
 18. Enable `/pb summary auto on`, complete or wipe an encounter, and confirm automatic output. Disable it afterward and verify `/pb clear` clears both the diagnostic snapshot and completed summary.
 19. On Opera Hall encounter `655`, run `/pb targets`. Confirm configured NPC IDs `17533` and `17534`, accepted Romulo/Julianne GUIDs, current primary, and selection reason.
 20. Apply a tracked debuff to each Opera boss. Confirm relevant activity can switch the single-primary display when no higher-priority visible target exists, both bosses retain independent candidates, and tracked effects on unregistered adds do not change the primary.
+21. Run `/pb roster` while solo, in a party, and in a raid. Confirm cached members/classes and group capabilities match the roster. Remove the only provider for a group, wait for `GROUP_ROSTER_UPDATE`, and verify its missing/grace row becomes `NOT AVAILABLE` without any repeated roster scanning during combat.
 
 `/pb dump` metrics are cumulative for the current encounter. `cleu` counts accepted tracked aura events, `refreshes` counts display evaluations, `ticker` counts 0.2-second ticks, and `scans` is split by boss appearance, CLEU, and manual debug scans. A growing ticker count must not increase scan counts by itself.
 

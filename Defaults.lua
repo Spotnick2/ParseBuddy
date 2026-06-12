@@ -24,6 +24,7 @@ PB.Defaults = {
 
 PB.Defaults.settings = {
     displayMode = "PROBLEMS_ONLY",
+    showUnavailable = false,
     groups = {
         spellVulnerability = { enabled = true, required = true },
         majorArmor = { enabled = true, required = true },

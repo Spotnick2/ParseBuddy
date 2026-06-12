@@ -90,8 +90,11 @@ function PB.Events:Initialize()
     frame:RegisterEvent("ENCOUNTER_END")
     frame:RegisterEvent("INSTANCE_ENCOUNTER_ENGAGE_UNIT")
     frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+    frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    frame:RegisterEvent("GROUP_ROSTER_UPDATE")
     frame:SetScript("OnEvent", function(_, event, ...)
         if event == "ENCOUNTER_START" then
+            PB.Roster:Refresh("encounterStart")
             PB.Encounter:Start(...)
         elseif event == "ENCOUNTER_END" then
             PB.Encounter:End(...)
@@ -99,6 +102,10 @@ function PB.Events:Initialize()
             PB.Encounter:RefreshVisibleBosses()
         elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
             PB.Events:HandleCombatLogEvent()
+        elseif event == "PLAYER_ENTERING_WORLD" then
+            PB.Roster:Refresh("playerEnteringWorld")
+        elseif event == "GROUP_ROSTER_UPDATE" then
+            PB.Roster:Refresh("groupRosterUpdate")
         end
     end)
 

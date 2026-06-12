@@ -33,8 +33,8 @@ end
 
 Config:Initialize()
 assertEqual(Config:GetScope(), "global", "new character defaults to global scope")
-assertEqual(ParseBuddyDB.schemaVersion, 2, "account settings schema upgraded")
-assertEqual(ParseBuddyCharDB.schemaVersion, 1, "character settings schema initialized")
+assertEqual(ParseBuddyDB.schemaVersion, 3, "account settings schema upgraded")
+assertEqual(ParseBuddyCharDB.schemaVersion, 2, "character settings schema initialized")
 assertEqual(Config:GetDisplayMode(), "FULL_LIST", "legacy account display mode migrates into global settings")
 assertEqual(Config:GetGroupSettings("recklessness").enabled, true, "recklessness enabled by default")
 assertEqual(Config:GetGroupSettings("recklessness").required, false, "recklessness optional by default")
@@ -45,18 +45,22 @@ Config:SetScope("personal")
 assertEqual(Config:GetScope(), "personal", "personal scope selected")
 assertEqual(ParseBuddyCharDB.settings.displayMode, "FULL_LIST", "first personal selection copies global display mode")
 assertEqual(ParseBuddyCharDB.settings.groups.majorArmor.required, true, "first personal selection copies group settings")
+assertEqual(ParseBuddyCharDB.settings.showUnavailable, false, "first personal selection copies unavailable-row setting")
 
 Config:SetDisplayMode("PROBLEMS_ONLY")
 Config:HandleGroupCommand("majorarmor optional")
 Config:HandleGroupCommand("recklessness disable")
+Config:HandleUnavailableCommand("show")
 assertEqual(ParseBuddyCharDB.settings.displayMode, "PROBLEMS_ONLY", "personal display mode mutates personal settings")
 assertEqual(ParseBuddyCharDB.settings.groups.majorArmor.required, false, "personal group requirement persists")
 assertEqual(ParseBuddyCharDB.settings.groups.recklessness.enabled, false, "personal group enable state persists")
+assertEqual(Config:GetShowUnavailable(), true, "personal unavailable-row setting persists")
 
 Config:SetScope("global")
 assertEqual(Config:GetDisplayMode(), "FULL_LIST", "global display mode preserved after personal changes")
 assertEqual(Config:GetGroupSettings("majorArmor").required, true, "global group requirement preserved")
 assertEqual(Config:GetGroupSettings("recklessness").enabled, true, "global group enable state preserved")
+assertEqual(Config:GetShowUnavailable(), false, "global unavailable-row setting preserved")
 
 Config:HandleGroupCommand("spellvulnerability disable")
 assertEqual(ParseBuddyDB.settings.groups.spellVulnerability.enabled, false, "case-insensitive stable key mutates global settings")
@@ -67,6 +71,7 @@ Config:Initialize()
 assertEqual(Config:GetScope(), "personal", "scope selection persists across initialization")
 assertEqual(Config:GetDisplayMode(), "PROBLEMS_ONLY", "personal display setting persists across initialization")
 assertEqual(Config:GetGroupSettings("majorArmor").required, false, "personal group setting persists across initialization")
+assertEqual(Config:GetShowUnavailable(), true, "personal unavailable setting persists across initialization")
 
 ParseBuddy.Encounter.active = true
 Config:HandleGroupCommand("judgement optional")
@@ -77,6 +82,7 @@ assertEqual(ParseBuddy.Encounter.refreshes, 2, "scope switch refreshes active en
 assertEqual(Config:HandleGroupCommand("notAGroup enable"), false, "unknown group key rejected")
 assertEqual(Config:HandleGroupCommand("majorArmor invalid"), false, "invalid group action rejected")
 assertEqual(Config:SetScope("invalid"), false, "invalid scope rejected")
+assertEqual(Config:HandleUnavailableCommand("invalid"), false, "invalid unavailable action rejected")
 
 local messageCount = #ParseBuddy.messages
 Config:PrintGroups()
