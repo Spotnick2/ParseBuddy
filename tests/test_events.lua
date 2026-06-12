@@ -50,6 +50,7 @@ ParseBuddy = {
 
 COMBATLOG_OBJECT_TYPE_NPC = 0x800
 COMBATLOG_OBJECT_REACTION_HOSTILE = 0x40
+COMBATLOG_OBJECT_REACTION_FRIENDLY = 0x10
 bit = {
     band = function(value, mask)
         return value % (mask * 2) >= mask and mask or 0
@@ -57,6 +58,8 @@ bit = {
 }
 
 local HOSTILE_NPC_FLAGS = 0x848
+local NEUTRAL_NPC_FLAGS = 0x828
+local FRIENDLY_NPC_FLAGS = 0x818
 local HOSTILE_PLAYER_FLAGS = 0x448
 
 CreateFrame = function()
@@ -112,11 +115,22 @@ currentEvent = { 100, "SPELL_AURA_APPLIED", false, "Player", "Tank", 0, 0, "Play
 Events:HandleCombatLogEvent()
 assertEqual(#ParseBuddy.State.events, 1, "hostile player cannot become fallback boss")
 
+currentEvent = { 100, "SPELL_AURA_APPLIED", false, "Player", "Tank", 0, 0, "Friendly-GUID", "Friendly NPC", FRIENDLY_NPC_FLAGS, 0, 25225, "Sunder Armor", 1, "DEBUFF" }
+Events:HandleCombatLogEvent()
+assertEqual(#ParseBuddy.State.events, 1, "friendly NPC cannot become fallback boss")
+
+currentEvent = { 100, "SPELL_AURA_APPLIED", false, "Player", "Tank", 0, 0, "Midnight-GUID", "Midnight", NEUTRAL_NPC_FLAGS, 0, 25225, "Sunder Armor", 1, "DEBUFF" }
+Events:HandleCombatLogEvent()
+assertEqual(#ParseBuddy.State.events, 2, "neutral encounter NPC can become fallback boss")
+assertEqual(ParseBuddy.Encounter.learned["Midnight-GUID"], "Midnight", "neutral fallback boss learned from combat log")
+
+ParseBuddy.Encounter.learned["Midnight-GUID"] = nil
+
 currentEvent = { 100, "SPELL_AURA_APPLIED", false, "Player", "Tank", 0, 0, "Fallback-GUID", "Fallback Boss", HOSTILE_NPC_FLAGS, 0, 25225, "Sunder Armor", 1, "DEBUFF" }
 Events:HandleCombatLogEvent()
-assertEqual(#ParseBuddy.State.events, 2, "fallback boss aura dispatched")
+assertEqual(#ParseBuddy.State.events, 3, "fallback boss aura dispatched")
 assertEqual(ParseBuddy.Encounter.learned["Fallback-GUID"], "Fallback Boss", "fallback boss learned from combat log")
-assertEqual(ParseBuddy.Encounter.refreshed, 2, "fallback boss refreshes display")
+assertEqual(ParseBuddy.Encounter.refreshed, 3, "fallback boss refreshes display")
 
 currentEvent = { 101, "SPELL_AURA_REFRESH", false, "Player", "Tank", 0, 0, "Fallback-GUID", "Fallback Boss", HOSTILE_NPC_FLAGS, 0, 25225, "Sunder Armor", 1, "DEBUFF" }
 Events:HandleCombatLogEvent()

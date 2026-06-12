@@ -17,14 +17,16 @@ local BOSS_DISCOVERY_EVENTS = {
     SPELL_AURA_REMOVED_DOSE = true,
 }
 
-local function isHostileNPC(flags)
+local function isTrackableNPC(flags)
     return flags ~= nil
         and bit ~= nil
         and bit.band ~= nil
         and COMBATLOG_OBJECT_TYPE_NPC ~= nil
-        and COMBATLOG_OBJECT_REACTION_HOSTILE ~= nil
         and bit.band(flags, COMBATLOG_OBJECT_TYPE_NPC) ~= 0
-        and bit.band(flags, COMBATLOG_OBJECT_REACTION_HOSTILE) ~= 0
+        and (
+            COMBATLOG_OBJECT_REACTION_FRIENDLY == nil
+            or bit.band(flags, COMBATLOG_OBJECT_REACTION_FRIENDLY) == 0
+        )
 end
 
 function PB.Events:HandleCombatLogEvent()
@@ -41,7 +43,7 @@ function PB.Events:HandleCombatLogEvent()
         end
     else
         if not BOSS_DISCOVERY_EVENTS[subevent]
-            or not isHostileNPC(destFlags)
+            or not isTrackableNPC(destFlags)
             or not PB.Encounter:LearnBossFromCombatLog(destGUID, destName)
         then
             return
