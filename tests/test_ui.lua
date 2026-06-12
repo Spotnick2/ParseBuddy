@@ -116,4 +116,91 @@ ParseBuddy.UI.ApplySavedScale = function() end
 ParseBuddy.UI:ResetPosition()
 assertEqual(ParseBuddyDB.frame.opacity, 1, "reset restores opacity")
 
+local function evaluation(state, required, sourceKnown, label)
+    return {
+        state = state,
+        sourceKnown = sourceKnown,
+        group = {
+            label = label,
+            missingText = label,
+            required = required,
+            spells = { { spellIds = { 1 } } },
+        },
+        candidate = state ~= "missing" and state ~= "grace" and { spellId = 1, sourceName = sourceKnown and "Source" or nil } or nil,
+        spell = state ~= "missing" and state ~= "grace" and { displayName = label } or nil,
+    }
+end
+
+assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("active", true, true, "Healthy"), "PROBLEMS_ONLY"), false, "healthy active row hidden in problems mode")
+assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("active", true, false, "Unknown"), "PROBLEMS_ONLY"), true, "unknown-source active row shown in problems mode")
+assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("expiring", false, true, "Expiring"), "PROBLEMS_ONLY"), true, "expiring row shown in problems mode")
+assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("partial", false, true, "Partial"), "PROBLEMS_ONLY"), true, "partial row shown in problems mode")
+assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("missing", true, false, "Required"), "PROBLEMS_ONLY"), true, "required missing row shown in problems mode")
+assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("missing", false, false, "Optional"), "PROBLEMS_ONLY"), false, "optional missing row hidden in problems mode")
+assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("grace", true, false, "Grace"), "PROBLEMS_ONLY"), true, "required grace row shown in problems mode")
+assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("disabled", true, false, "Disabled"), "FULL_LIST"), false, "disabled row hidden in full mode")
+assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("active", true, true, "Healthy"), "FULL_LIST"), true, "healthy row shown in full mode")
+
+local rendered = {}
+local rowShows = { 0, 0, 0, 0 }
+local rowHides = { 0, 0, 0, 0 }
+local height
+local rows = {}
+local index
+for index = 1, 4 do
+    rows[index] = {
+        Show = function() rowShows[index] = rowShows[index] + 1 end,
+        Hide = function() rowHides[index] = rowHides[index] + 1 end,
+    }
+end
+ParseBuddy.UI.frame = {
+    rows = rows,
+    SetHeight = function(_, value) height = value end,
+}
+ParseBuddy.UI.ApplyRowData = function(_, targetRow, rowData)
+    rendered[#rendered + 1] = { row = targetRow, group = rowData.group }
+end
+ParseBuddyDB.displayMode = "PROBLEMS_ONLY"
+local compactEvaluations = {
+    evaluation("active", true, true, "Healthy One"),
+    evaluation("missing", true, false, "Missing"),
+    evaluation("active", true, true, "Healthy Two"),
+    evaluation("expiring", true, true, "Expiring"),
+}
+assertEqual(ParseBuddy.UI:RenderEvaluations(compactEvaluations, false), 2, "problems mode compacts visible rows")
+assertEqual(rendered[1].group, "Missing", "first compact slot receives first problem")
+assertEqual(rendered[2].group, "Expiring", "second compact slot receives later problem")
+assertEqual(rowShows[1], 1, "first compact row shown")
+assertEqual(rowShows[2], 1, "second compact row shown")
+assertEqual(rowShows[3], 0, "unused stale row remains hidden")
+assertEqual(rowHides[4], 1, "all row slots are hidden before compaction")
+assertEqual(height, 116, "frame height matches two compact rows")
+
+local showCountBeforeRepeat = rowShows[1] + rowShows[2] + rowShows[3] + rowShows[4]
+local hideCountBeforeRepeat = rowHides[1] + rowHides[2] + rowHides[3] + rowHides[4]
+ParseBuddy.UI:RenderEvaluations(compactEvaluations, false)
+assertEqual(rowShows[1] + rowShows[2] + rowShows[3] + rowShows[4], showCountBeforeRepeat, "unchanged compact rows are not reshown on ticker refresh")
+assertEqual(rowHides[1] + rowHides[2] + rowHides[3] + rowHides[4], hideCountBeforeRepeat, "unchanged hidden rows are not rehidden on ticker refresh")
+
+rendered = {}
+ParseBuddyDB.displayMode = "FULL_LIST"
+assertEqual(ParseBuddy.UI:RenderEvaluations(compactEvaluations, false), 4, "full mode renders every enabled evaluation")
+assertEqual(rendered[3].group, "Healthy Two", "full mode overwrites compact row slots without stale data")
+
+rendered = {}
+ParseBuddyDB.displayMode = "PROBLEMS_ONLY"
+assertEqual(ParseBuddy.UI:RenderEvaluations(compactEvaluations, true), 4, "test rendering bypasses display filtering")
+
+local refreshes = 0
+ParseBuddy.Encounter.active = true
+ParseBuddy.Encounter.RefreshDisplay = function() refreshes = refreshes + 1 end
+ParseBuddy.UI:SetDisplayMode("full")
+assertEqual(ParseBuddyDB.displayMode, "FULL_LIST", "full mode persists")
+assertEqual(refreshes, 1, "mode change refreshes active encounter")
+ParseBuddy.UI:SetDisplayMode("problems")
+assertEqual(ParseBuddyDB.displayMode, "PROBLEMS_ONLY", "problems mode persists")
+assertEqual(refreshes, 2, "second mode change refreshes active encounter")
+ParseBuddy.UI:SetDisplayMode("invalid")
+assertEqual(ParseBuddyDB.displayMode, "PROBLEMS_ONLY", "invalid mode leaves persisted setting unchanged")
+
 print("ParseBuddy UI tests passed: " .. testsRun)

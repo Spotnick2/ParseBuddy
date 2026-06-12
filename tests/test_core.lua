@@ -24,6 +24,7 @@ ParseBuddy = {
         ResetPosition = function() end,
         SetScale = function() end,
         SetOpacity = function(self, value) self.opacity = value end,
+        SetDisplayMode = function(self, value) self.displayMode = value end,
     },
 }
 
@@ -61,6 +62,13 @@ ParseBuddy:HandleSlashCommand("opacity 0.65")
 assertEqual(ParseBuddy.UI.opacity, "0.65", "opacity slash command dispatches value")
 ParseBuddy:HandleSlashCommand("help")
 assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "opacity", 1, true) ~= nil, true, "help lists opacity")
+
+ParseBuddy:HandleSlashCommand("mode problems")
+assertEqual(ParseBuddy.UI.displayMode, "problems", "problems mode slash command dispatches value")
+ParseBuddy:HandleSlashCommand("mode full")
+assertEqual(ParseBuddy.UI.displayMode, "full", "full mode slash command dispatches value")
+ParseBuddy:HandleSlashCommand("help")
+assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "mode", 1, true) ~= nil, true, "help lists display mode")
 
 ParseBuddy:HandleSlashCommand("snapshot")
 assertEqual(ParseBuddy.snapshots, 1, "snapshot slash command prints saved snapshot")

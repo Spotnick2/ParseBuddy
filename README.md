@@ -31,6 +31,9 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - `/pb` or `/parsebuddy`: show help
 - `/pb help`: show help
 - `/pb test`: show the deterministic test frame
+- `/pb mode problems`: use Problems Only during live encounters
+- `/pb mode full`: use Full List during live encounters
+- `/pb mode`: show the current display mode
 - `/pb dump`: print explicitly labeled live diagnostics, or the completed snapshot when no encounter is active
 - `/pb snapshot`: print the automatically captured diagnostic snapshot from the most recently completed encounter
 - `/pb clear`: clear the in-memory and persisted diagnostic snapshot
@@ -66,8 +69,9 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 
 ## Not Yet Implemented
 
-- Profiles and per-group enable, required, and optional settings
-- Problems Only versus Full List behavior
+- Global versus personal profile scope and per-group enable, required, and optional settings
+  - requested slash-command scope selector, tentatively `/pb profile global` and `/pb profile personal`
+  - exact per-character storage and override semantics must be defined before implementation
 - Additional optional debuff groups beyond Curse of Recklessness and boss-specific profiles
 - Multi-boss display sections
 - Sounds, raid warnings, whispers, assignments, and import/export
@@ -93,6 +97,10 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - `/pb opacity 0.5` makes the frame translucent and persists after `/reload`.
 - The close button hides the test frame.
 - `/pb test` renders all seven monitored groups from deterministic evaluator state.
+- Problems Only is the persisted default and hides healthy active rows while showing required missing/grace, partial, expiring, and unknown-source rows.
+- Full List shows every enabled group, including healthy active rows.
+- `/pb mode problems` and `/pb mode full` switch immediately during an encounter and persist after `/reload`.
+- Filtered rows compact without gaps, unused row slots stay hidden, and the frame height follows the visible row count.
 - Starting a supported encounter shows the primary boss and all seven live group rows. Visible `bossN` units are preferred, but a tracked combat-log boss target can seed the display when no unit is exposed.
 - Missing groups are gray during pull grace and red afterward.
 - Applying, refreshing, stacking, or removing a tracked boss debuff updates its group row immediately.
@@ -112,16 +120,17 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 Run these checks after `/reload` with Lua errors enabled:
 
 1. Run `/pb validate`. Record any missing IDs; expected client-specific failures must be investigated before the row is trusted.
-2. Run `/pb test`, verify all seven deterministic rows, including Curse of Recklessness, then close and reopen it.
+2. Run `/pb test` in both saved display modes. Verify all seven deterministic rows remain visible because test mode deliberately bypasses live filtering.
 3. Verify unlock, drag, lock, scale, `/pb reset`, and persistence across another `/reload`.
-4. On a normal `boss1` encounter, verify the title, grace period, all seven rows, source names, Sunder stacks, warning colors, and countdowns.
-5. Apply and remove each available tracked debuff. Confirm CLEU changes appear immediately and known timers expire without requiring a removal event.
-6. Run `/pb debugscan` while the boss is visible. Confirm the boss count and tracked-aura count match the frame.
-7. Run `/pb dump`. Confirm the primary GUID, scan reason, candidate expiration source, and visible evaluations match the boss.
-8. Retest Magtheridon: a channeler may seed the provisional display, but Magtheridon must replace it when identified and CoE must remain active in that event tick.
-9. On a phase transition, verify an unrelated add cannot replace a previously visible boss and relevant activity can reclaim the known boss.
-10. End or wipe the encounter. Confirm the ticker stops and the frame hides without stale test or encounter rows.
-11. After combat, run `/pb snapshot` and `/pb dump`. Confirm both show `COMPLETED SNAPSHOT`, `active=no`, final raw candidates, final evaluations, and the retained last meaningful live evaluations. Reload once and confirm the snapshot remains available, then clear it with `/pb clear`.
+4. On a normal `boss1` encounter, use `/pb mode full` and verify all seven rows, source names, Sunder stacks, warning colors, and countdowns.
+5. Use `/pb mode problems`. Verify healthy green rows disappear; required missing/grace, partial, expiring, and unknown-source rows remain; and the frame compacts without stale rows.
+6. Apply and remove each available tracked debuff. Confirm CLEU changes appear immediately and known timers expire without requiring a removal event.
+7. Run `/pb debugscan` while the boss is visible. Confirm the boss count and tracked-aura count match the frame.
+8. Run `/pb dump`. Confirm the primary GUID, scan reason, candidate expiration source, and visible evaluations match the boss.
+9. Retest Magtheridon: a channeler may seed the provisional display, but Magtheridon must replace it when identified and CoE must remain active in that event tick.
+10. On a phase transition, verify an unrelated add cannot replace a previously visible boss and relevant activity can reclaim the known boss.
+11. End or wipe the encounter. Confirm the ticker stops and the frame hides without stale test or encounter rows.
+12. After combat, run `/pb snapshot` and `/pb dump`. Confirm both show `COMPLETED SNAPSHOT`, `active=no`, final raw candidates, final evaluations, and the retained last meaningful live evaluations. Reload once and confirm the snapshot remains available, then clear it with `/pb clear`.
 
 `/pb dump` metrics are cumulative for the current encounter. `cleu` counts accepted tracked aura events, `refreshes` counts display evaluations, `ticker` counts 0.2-second ticks, and `scans` is split by boss appearance, CLEU, and manual debug scans. A growing ticker count must not increase scan counts by itself.
 

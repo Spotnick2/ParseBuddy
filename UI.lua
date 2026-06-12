@@ -14,6 +14,8 @@ local MIN_OPACITY = 0.2
 local MAX_OPACITY = 1
 local LOCKED_TEXTURE = "Interface\\Buttons\\LockButton-Locked-Up"
 local UNLOCKED_TEXTURE = "Interface\\Buttons\\LockButton-Unlocked-Up"
+local DISPLAY_MODE_PROBLEMS = "PROBLEMS_ONLY"
+local DISPLAY_MODE_FULL = "FULL_LIST"
 
 local STATE_COLORS = {
     active = { 0.08, 0.42, 0.12, 0.92 },
@@ -93,6 +95,18 @@ local function createRow(parent, index)
     createBackdrop(row, STATE_COLORS.disabled)
 
     return row
+end
+
+local function setRowVisible(row, visible)
+    if row.parseBuddyVisible == visible then
+        return
+    end
+    row.parseBuddyVisible = visible
+    if visible then
+        row:Show()
+    else
+        row:Hide()
+    end
 end
 
 function PB.UI:ApplyRowData(row, data)
@@ -285,15 +299,79 @@ end
 function PB.UI:SetRowsVisible(visible)
     local index
     for index = 1, #self.frame.rows do
-        if visible then
-            self.frame.rows[index]:Show()
-        else
-            self.frame.rows[index]:Hide()
+        setRowVisible(self.frame.rows[index], visible)
+    end
+end
+
+function PB.UI:IsEvaluationVisible(evaluation, displayMode)
+    if not evaluation or evaluation.state == "disabled" then
+        return false
+    end
+
+    if displayMode == DISPLAY_MODE_FULL then
+        return true
+    end
+
+    if evaluation.state == "partial" or evaluation.state == "expiring" then
+        return true
+    end
+    if evaluation.state == "active" and not evaluation.sourceKnown then
+        return true
+    end
+    if evaluation.state == "missing" or evaluation.state == "grace" then
+        return evaluation.group and evaluation.group.required ~= false
+    end
+    return false
+end
+
+function PB.UI:RenderEvaluations(evaluations, showAll)
+    local frame = self:CreateFrame()
+    local displayMode = ParseBuddyDB.displayMode
+    local visibleCount = 0
+    local index
+
+    for index = 1, #(evaluations or {}) do
+        local evaluation = evaluations[index]
+        if showAll or self:IsEvaluationVisible(evaluation, displayMode) then
+            visibleCount = visibleCount + 1
+            self:ApplyRowData(frame.rows[visibleCount], self:EvaluationToRowData(evaluation))
+            setRowVisible(frame.rows[visibleCount], true)
         end
+    end
+
+    for index = visibleCount + 1, #frame.rows do
+        setRowVisible(frame.rows[index], false)
+    end
+
+    frame:SetHeight(HEADER_HEIGHT + (visibleCount * (ROW_HEIGHT + ROW_SPACING)) + FRAME_PADDING)
+    return visibleCount
+end
+
+function PB.UI:SetDisplayMode(value)
+    local mode = value and value:lower() or ""
+    if mode == "problems" then
+        ParseBuddyDB.displayMode = DISPLAY_MODE_PROBLEMS
+        PB:Print("Display mode set to Problems Only.")
+    elseif mode == "full" then
+        ParseBuddyDB.displayMode = DISPLAY_MODE_FULL
+        PB:Print("Display mode set to Full List.")
+    elseif mode == "" then
+        PB:Print("Display mode: " .. (ParseBuddyDB.displayMode == DISPLAY_MODE_FULL and "Full List" or "Problems Only"))
+        return
+    else
+        PB:Print("Mode must be 'problems' or 'full'.")
+        return
+    end
+
+    if PB.Encounter and PB.Encounter.active then
+        PB.Encounter:RefreshDisplay()
     end
 end
 
 function PB.UI:Initialize()
+    if ParseBuddyDB.displayMode ~= DISPLAY_MODE_PROBLEMS and ParseBuddyDB.displayMode ~= DISPLAY_MODE_FULL then
+        ParseBuddyDB.displayMode = DISPLAY_MODE_PROBLEMS
+    end
     self:CreateFrame()
     self:ApplySavedPosition()
     self:ApplySavedScale()
@@ -344,14 +422,9 @@ function PB.UI:ShowTestMode()
 
     local frame = self:CreateFrame()
     local evaluations = PB.State:CreateTestEvaluations()
-    local index
-    for index = 1, #evaluations do
-        self:ApplyRowData(frame.rows[index], self:EvaluationToRowData(evaluations[index]))
-    end
     self.mode = "test"
     frame.subtitle:SetText("Test Boss - deterministic preview")
-    frame:SetHeight(HEADER_HEIGHT + (#evaluations * (ROW_HEIGHT + ROW_SPACING)) + FRAME_PADDING)
-    self:SetRowsVisible(true)
+    self:RenderEvaluations(evaluations, true)
     self:UpdateLockDisplay()
     frame:Show()
 end
@@ -383,12 +456,7 @@ function PB.UI:UpdateEncounter(encounter, primaryBoss, evaluations)
         return
     end
 
-    local index
-    for index = 1, #evaluations do
-        self:ApplyRowData(self.frame.rows[index], self:EvaluationToRowData(evaluations[index]))
-    end
-    self:SetRowsVisible(true)
-    self.frame:SetHeight(HEADER_HEIGHT + (#evaluations * (ROW_HEIGHT + ROW_SPACING)) + FRAME_PADDING)
+    self:RenderEvaluations(evaluations, false)
 end
 
 function PB.UI:HideEncounter()

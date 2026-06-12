@@ -10,7 +10,7 @@ local function trim(value)
 end
 
 local function showHelp()
-    PB:Print("Commands: /pb help, test, dump, snapshot, clear, debugscan, validate, lock, unlock, reset, scale [0.6-1.4], opacity [0.2-1.0], debug")
+    PB:Print("Commands: /pb help, test, mode [problems|full], dump, snapshot, clear, debugscan, validate, lock, unlock, reset, scale [0.6-1.4], opacity [0.2-1.0], debug")
 end
 
 function PB:HandleSlashCommand(message)
@@ -22,6 +22,8 @@ function PB:HandleSlashCommand(message)
         showHelp()
     elseif command == "test" then
         PB.UI:ShowTestMode()
+    elseif command == "mode" then
+        PB.UI:SetDisplayMode(argument)
     elseif command == "lock" then
         PB.UI:Lock()
     elseif command == "unlock" then
