@@ -75,6 +75,8 @@ assertEqual(Summary.active.scope, "personal", "settings scope frozen at pull")
 assertEqual(Summary.active.displayMode, "FULL_LIST", "display mode frozen at pull")
 assertEqual(Summary.active.groups.attackPower, nil, "disabled group excluded from accumulator")
 assertEqual(Summary.active.groups.recklessness.required, false, "optional group retained")
+Summary:RecordPrimarySwitch(1, { guid = "Boss-A", name = "First Boss" }, "recent-registered")
+Summary:RecordPrimarySwitch(12, { guid = "Boss-B", name = "Second Boss" }, "recent-registered")
 
 states.majorArmor = "active"
 Summary:Observe(2, "Boss")
@@ -104,6 +106,8 @@ assertNear(armor.missing, 2, "missing duration tracked")
 assertNear(armor.satisfiedPercent, 57.142857, "satisfied percentage calculated")
 assertEqual(findGroup(summary, "attackPower"), nil, "disabled group omitted from final summary")
 assertEqual(findGroup(summary, "recklessness").required, false, "optional flag preserved in final summary")
+assertEqual(#summary.primarySwitches, 2, "primary switches retained as summary metadata")
+assertEqual(summary.primarySwitches[2].guid, "Boss-B", "latest primary switch GUID retained")
 assertEqual(ParseBuddyDB.lastEncounterSummary, nil, "completed summary is not persisted in account saved variables")
 assertEqual(ParseBuddyCharDB, nil, "completed summary does not create character saved variables")
 

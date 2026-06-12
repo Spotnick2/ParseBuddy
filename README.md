@@ -44,6 +44,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - `/pb summary`: print the most recently completed encounter's in-memory uptime summary
 - `/pb summary auto on`: automatically print the summary when an encounter ends
 - `/pb summary auto off`: disable automatic summary output; this is the account-wide default
+- `/pb targets`: print configured encounter NPC IDs, accepted GUIDs, current primary, and selection reason
 - `/pb dump`: print explicitly labeled live diagnostics, or the completed snapshot when no encounter is active
 - `/pb snapshot`: print the automatically captured diagnostic snapshot from the most recently completed encounter
 - `/pb clear`: clear the in-memory and persisted diagnostic snapshot
@@ -83,7 +84,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - Additional optional debuff groups beyond Curse of Recklessness and boss-specific profiles
 - Multi-boss display sections
 - Sounds, raid warnings, whispers, assignments, and import/export
-- Multi-boss uptime aggregation and a graphical summary window
+- Multiple simultaneous boss UI sections, multi-boss uptime aggregation, and a graphical summary window
 
 ## MVP In-Game Checks
 
@@ -113,6 +114,10 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - Summary settings are frozen at encounter start, including scope, display mode, enabled flags, and required flags. Mid-fight configuration changes do not rewrite the active summary.
 - Summaries are single-primary-boss and memory-only. The latest summary is cleared by `/pb clear`, a new encounter, or `/reload`; diagnostic snapshots remain separately persisted.
 - Automatic summary output is account-wide, off by default, and does not send raid messages.
+- Encounter `655` Opera Hall uses a numeric target registry verified from the June 11, 2026 local combat log: Romulo NPC `17533` and Julianne NPC `17534`.
+- Configured encounters accept registered NPC IDs and visible `boss1` through `boss5` GUIDs while rejecting arbitrary combat-log adds. Unconfigured encounters retain the generic fallback behavior.
+- The single displayed primary is selected deterministically: visible `boss1`, first visible registered boss, most recently relevant registered boss, then the previous authoritative target. Registered target switches retain each boss's candidate state.
+- Uptime remains single-primary in this version. Primary switches are retained as summary metadata but are not aggregated into a multi-boss result.
 - Starting a supported encounter shows the primary boss and all seven live group rows. Visible `bossN` units are preferred, but a tracked combat-log boss target can seed the display when no unit is exposed.
 - Missing groups are gray during pull grace and red afterward.
 - Applying, refreshing, stacking, or removing a tracked boss debuff updates its group row immediately.
@@ -149,6 +154,8 @@ Run these checks after `/reload` with Lua errors enabled:
 16. Run `/pb summary`. Confirm total duration, grace-excluded measured duration, frozen scope/mode, and per-enabled-group satisfied/partial/missing seconds and percentages.
 17. Verify Sunder partial-to-five-stack and Sunder-to-Expose handoffs produce the expected group totals without a false missing gap. Let a known-duration effect expire without a removal event and confirm missing time begins at expiration.
 18. Enable `/pb summary auto on`, complete or wipe an encounter, and confirm automatic output. Disable it afterward and verify `/pb clear` clears both the diagnostic snapshot and completed summary.
+19. On Opera Hall encounter `655`, run `/pb targets`. Confirm configured NPC IDs `17533` and `17534`, accepted Romulo/Julianne GUIDs, current primary, and selection reason.
+20. Apply a tracked debuff to each Opera boss. Confirm relevant activity can switch the single-primary display when no higher-priority visible target exists, both bosses retain independent candidates, and tracked effects on unregistered adds do not change the primary.
 
 `/pb dump` metrics are cumulative for the current encounter. `cleu` counts accepted tracked aura events, `refreshes` counts display evaluations, `ticker` counts 0.2-second ticks, and `scans` is split by boss appearance, CLEU, and manual debug scans. A growing ticker count must not increase scan counts by itself.
 

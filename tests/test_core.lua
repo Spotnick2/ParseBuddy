@@ -16,6 +16,7 @@ ParseBuddy = {
         DebugScan = function(self)
             self.scans = self.scans + 1
         end,
+        PrintTargets = function(self) self.targets = (self.targets or 0) + 1 end,
     },
     UI = {
         ShowTestMode = function() end,
@@ -95,6 +96,11 @@ ParseBuddy:HandleSlashCommand("summary auto on")
 assertEqual(ParseBuddy.Summary.auto, "on", "summary auto slash command dispatches value")
 ParseBuddy:HandleSlashCommand("help")
 assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "summary", 1, true) ~= nil, true, "help lists summary commands")
+
+ParseBuddy:HandleSlashCommand("targets")
+assertEqual(ParseBuddy.Encounter.targets, 1, "targets slash command prints encounter target diagnostics")
+ParseBuddy:HandleSlashCommand("help")
+assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "targets", 1, true) ~= nil, true, "help lists target diagnostics")
 
 ParseBuddy:HandleSlashCommand("snapshot")
 assertEqual(ParseBuddy.snapshots, 1, "snapshot slash command prints saved snapshot")

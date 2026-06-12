@@ -53,6 +53,19 @@ function PB.Summary:Begin(encounter)
         displayMode = settings.displayMode,
         settings = settings,
         groups = groups,
+        primarySwitches = {},
+    }
+end
+
+function PB.Summary:RecordPrimarySwitch(now, boss, reason)
+    if not self.active then
+        return
+    end
+    self.active.primarySwitches[#self.active.primarySwitches + 1] = {
+        at = now,
+        guid = boss and boss.guid or nil,
+        name = boss and boss.name or nil,
+        reason = reason,
     }
 end
 
@@ -119,6 +132,7 @@ function PB.Summary:Finalize(endedAt, success)
         scope = active.scope,
         displayMode = active.displayMode,
         groups = {},
+        primarySwitches = active.primarySwitches,
     }
 
     local _, libraryGroup
@@ -164,6 +178,7 @@ function PB.Summary:Print()
         summary.scope,
         summary.displayMode
     ))
+    PB:Print(string.format("Primary switches: %d", #(summary.primarySwitches or {})))
     local _, group
     for _, group in ipairs(summary.groups) do
         PB:Print(string.format(

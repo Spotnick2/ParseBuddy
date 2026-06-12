@@ -53,7 +53,19 @@ function PB.Encounter:Reset()
     self.visibleBosses = {}
     self.visibleOrder = {}
     self.primaryVisibleBoss = nil
+    self.primarySelectionReason = nil
     PB.State:ResetEncounter()
+end
+
+function PB.Encounter:SetPrimaryBoss(boss, reason, observedAt)
+    local previousGUID = self.primaryVisibleBoss and self.primaryVisibleBoss.guid or nil
+    local nextGUID = boss and boss.guid or nil
+    self.primaryVisibleBoss = boss
+    self.primarySelectionReason = reason
+    if previousGUID ~= nextGUID and PB.Summary then
+        PB.Summary:RecordPrimarySwitch(observedAt or GetTime(), boss, reason)
+    end
+    return previousGUID ~= nextGUID
 end
 
 function PB.Encounter:StartDisplayTicker()
@@ -293,6 +305,9 @@ function PB.Encounter:RefreshVisibleBosses(unitProvider)
                 end
 
                 boss.name = unitProvider.Name(unitToken) or boss.name or "Unknown Boss"
+                local registered, npcId = PB.EncounterTargets:IsRegistered(self.encounter and self.encounter.id, guid)
+                boss.npcId = npcId or boss.npcId
+                boss.registeredTarget = registered or boss.registeredTarget
                 boss.unitToken = unitToken
                 boss.lastUnitToken = unitToken
                 boss.visible = true
@@ -307,11 +322,34 @@ function PB.Encounter:RefreshVisibleBosses(unitProvider)
         end
     end
 
-    if self.visibleOrder[1] then
-        self.primaryVisibleBoss = self.visibleOrder[1]
-    elseif not (self.primaryVisibleBoss and self.primaryVisibleBoss.discoveredFromCombatLog) then
-        self.primaryVisibleBoss = nil
+    local configuredTargets = PB.EncounterTargets:Get(self.encounter and self.encounter.id)
+    local selected
+    local reason
+    if self.visibleOrder[1] and self.visibleOrder[1].unitToken == "boss1" then
+        selected = self.visibleOrder[1]
+        reason = "visible-boss1"
+    elseif configuredTargets then
+        local _, boss
+        for _, boss in ipairs(self.visibleOrder) do
+            local registered = PB.EncounterTargets:IsRegistered(self.encounter.id, boss.guid)
+            if registered then
+                selected = boss
+                reason = "visible-registered"
+                break
+            end
+        end
+    elseif self.visibleOrder[1] then
+        selected = self.visibleOrder[1]
+        reason = "first-visible"
     end
+    if not selected and self.primaryVisibleBoss and self.primaryVisibleBoss.registeredTarget then
+        selected = self.primaryVisibleBoss
+        reason = self.primarySelectionReason or "previous-authoritative"
+    elseif not selected and self.primaryVisibleBoss and self.primaryVisibleBoss.discoveredFromCombatLog then
+        selected = self.primaryVisibleBoss
+        reason = self.primarySelectionReason or "generic-fallback"
+    end
+    self:SetPrimaryBoss(selected, reason)
     self:RecordMeaningfulLiveState()
     self:RefreshDisplay(true)
 end
@@ -386,17 +424,39 @@ function PB.Encounter:ShouldRefreshForGUID(guid)
     return self:IsPrimaryBossGUID(guid)
 end
 
+function PB.Encounter:HasHigherPriorityVisibleTarget()
+    if self.visibleOrder[1] and self.visibleOrder[1].unitToken == "boss1" then
+        return true
+    end
+    local _, boss
+    for _, boss in ipairs(self.visibleOrder) do
+        if boss.registeredTarget then
+            return true
+        end
+    end
+    return false
+end
+
 function PB.Encounter:ReclaimPrimaryBoss(guid)
+    local boss = self.encounteredBosses[guid]
+    if boss and boss.registeredTarget then
+        if self:HasHigherPriorityVisibleTarget() then
+            return false
+        end
+        boss.lastRelevantAt = GetTime()
+        return self:SetPrimaryBoss(boss, "recent-registered", boss.lastRelevantAt)
+    end
+
     if not self.active or self:HasVisibleBosses() or self.primaryVisibleBoss then
         return false
     end
 
-    local boss = self.encounteredBosses[guid]
+    boss = self.encounteredBosses[guid]
     if not boss or not (boss.lastUnitToken or boss.matchesEncounterName) then
         return false
     end
 
-    self.primaryVisibleBoss = boss
+    self:SetPrimaryBoss(boss, "reclaimed-authoritative")
     return true
 end
 
@@ -413,6 +473,34 @@ end
 function PB.Encounter:LearnBossFromCombatLog(guid, name)
     if not self.active or not guid then
         return false
+    end
+
+    local configuredTargets = PB.EncounterTargets:Get(self.encounter and self.encounter.id)
+    if configuredTargets then
+        local registered, npcId = PB.EncounterTargets:IsRegistered(self.encounter.id, guid)
+        if not registered then
+            return false
+        end
+        local boss = self.encounteredBosses[guid]
+        if not boss then
+            boss = {
+                guid = guid,
+                npcId = npcId,
+                name = name or configuredTargets.npcIds[npcId] or "Unknown Boss",
+                firstSeenIndex = 0,
+                visible = false,
+                unitToken = nil,
+                lastUnitToken = nil,
+                discoveredFromCombatLog = true,
+                registeredTarget = true,
+            }
+            self.encounteredBosses[guid] = boss
+        end
+        boss.lastRelevantAt = GetTime()
+        if not self:HasHigherPriorityVisibleTarget() then
+            self:SetPrimaryBoss(boss, "recent-registered", boss.lastRelevantAt)
+        end
+        return true
     end
 
     if self:HasVisibleBosses() then
@@ -449,7 +537,54 @@ function PB.Encounter:LearnBossFromCombatLog(guid, name)
         matchesEncounterName = matchesEncounterName,
     }
     self.encounteredBosses[guid] = boss
-    self.primaryVisibleBoss = boss
+    self:SetPrimaryBoss(boss, matchesEncounterName and "encounter-name" or "generic-fallback")
+    return true
+end
+
+function PB.Encounter:PrintTargets()
+    if not self.active or not self.encounter then
+        PB:Print("No active encounter targets are available.")
+        return false
+    end
+
+    local configured = PB.EncounterTargets:Get(self.encounter.id)
+    PB:Print(string.format(
+        "Targets: encounter=%s id=%s registry=%s primary=%s reason=%s",
+        tostring(self.encounter.name),
+        tostring(self.encounter.id),
+        configured and "configured" or "generic",
+        self.primaryVisibleBoss and self.primaryVisibleBoss.name or "none",
+        self.primarySelectionReason or "none"
+    ))
+    if configured then
+        local npcIds = {}
+        local npcId
+        for npcId in pairs(configured.npcIds) do
+            npcIds[#npcIds + 1] = npcId
+        end
+        table.sort(npcIds)
+        local _, id
+        for _, id in ipairs(npcIds) do
+            PB:Print(string.format("Configured target: npcId=%d name=%s", id, configured.npcIds[id]))
+        end
+    end
+
+    local bosses = {}
+    local _, boss
+    for _, boss in pairs(self.encounteredBosses) do
+        bosses[#bosses + 1] = boss
+    end
+    table.sort(bosses, function(left, right) return tostring(left.guid) < tostring(right.guid) end)
+    for _, boss in ipairs(bosses) do
+        PB:Print(string.format(
+            "Accepted target: guid=%s npcId=%s name=%s visible=%s registered=%s",
+            tostring(boss.guid),
+            tostring(boss.npcId or PB.EncounterTargets:GetNPCId(boss.guid) or "none"),
+            tostring(boss.name),
+            boss.visible and "yes" or "no",
+            boss.registeredTarget and "yes" or "no"
+        ))
+    end
     return true
 end
 
@@ -593,10 +728,11 @@ function PB.Encounter:BuildDumpLines(options)
     ))
     local primaryBoss = self.primaryVisibleBoss
     appendLine(lines, string.format(
-        "UI: mode=%s frameShown=%s primaryBoss=%s visible=%s fallback=%s encounterMatch=%s",
+        "UI: mode=%s frameShown=%s primaryBoss=%s visible=%s fallback=%s encounterMatch=%s primaryReason=%s",
         tostring(uiMode), formatBool(frameShown), formatMaybe(primaryBoss and primaryBoss.name),
         formatBool(primaryBoss and primaryBoss.visible), formatBool(primaryBoss and primaryBoss.discoveredFromCombatLog),
-        formatBool(primaryBoss and primaryBoss.matchesEncounterName)
+        formatBool(primaryBoss and primaryBoss.matchesEncounterName),
+        formatMaybe(self.primarySelectionReason)
     ))
 
     appendLine(lines, "Visible boss units:")

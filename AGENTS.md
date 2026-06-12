@@ -33,6 +33,8 @@ Tagline: "Your wingman for cleaner raid parses."
 - Personal settings are copied from current global settings only on first selection. Scope switching must preserve both stores without merging or overwriting later edits.
 - The encounter summary is group-level, single-primary, and memory-only. It accrues satisfied, partial, and missing intervals after grace from evaluator transitions; it must not retain raw CLEU history, score players, scan auras, or persist summaries across reloads.
 - Freeze summary scope, display mode, enabled flags, and required flags at encounter start. Mid-fight settings changes must not alter the active summary.
+- Configured multi-boss encounters use numeric NPC IDs parsed from Creature/Vehicle GUIDs. Registry entries accept all configured targets without deleting prior candidate state and reject arbitrary CLEU adds; unconfigured encounters preserve generic fallback behavior.
+- Primary selection precedence is visible `boss1`, first visible registered boss, most recently relevant registered boss, then previous authoritative boss. Continue rendering one boss section until multi-boss UI is explicitly requested.
 - Combat-log fallback discovery may learn non-friendly NPC destinations, including neutral encounter targets such as Midnight, and never from a full aura-removal event. Continue rejecting players, pets, guardians, and friendly NPCs.
 - A boss previously exposed through `boss1`-`boss5`, or matching the encounter name, takes precedence over newly discovered fallback adds. Relevant activity from a known hidden boss may reclaim the single-boss display.
 
@@ -85,6 +87,7 @@ Do not implement more than the requested milestone. The first priorities are add
 - `Debug.lua`: addon-prefixed and conditional debug output, including dump helpers.
 - `UI.lua`: frame, compact row rendering, display-mode filtering, movement, lock state, and test mode.
 - `DebuffLibrary.lua`: static group definitions and spell-ID lookup tables.
+- `EncounterTargets.lua`: static encounter-ID to NPC-ID target registry and Lua 5.1-compatible Creature/Vehicle GUID parsing.
 - `State.lua`: encounter candidate state, deterministic group evaluation, known-duration expiry, and injectable single-unit aura resync.
 - `Summary.lua`: frozen encounter settings and in-memory group-level uptime interval accounting and output.
 - `Encounter.lua`: encounter lifecycle, boss GUID/unit-token tracking, opportunistic scan triggers, and the display-only ticker.
@@ -108,6 +111,7 @@ Verify the TOC Interface against the installed TBC Anniversary client before rel
 - `/pb snapshot` prints the automatically captured diagnostic snapshot from the most recently completed encounter.
 - `/pb clear` clears both `ParseBuddy.lastEncounterSnapshot` and `ParseBuddyDB.lastEncounterSnapshot`.
 - `/pb summary` prints the latest in-memory summary; `/pb summary auto on|off` controls account-wide automatic output, off by default. `/pb clear` also clears the completed summary without stopping an active accumulator.
+- `/pb targets` prints active target-registry diagnostics and selection reason. It must remain debug-path-only and must not scan units or auras.
 
 ## Diagnostic Snapshot Lifecycle
 
@@ -119,4 +123,4 @@ Verify the TOC Interface against the installed TBC Anniversary client before rel
 
 ## Deferred Optional Features
 
-- Multi-boss summary aggregation, a graphical summary window, historical summaries, and persistence remain deferred. Do not turn summaries into player scoring, blame, ranking, or a full post-raid parser.
+- Multiple boss UI sections, multi-boss summary aggregation, a graphical summary window, historical summaries, and persistence remain deferred. Do not turn summaries into player scoring, blame, ranking, or a full post-raid parser.

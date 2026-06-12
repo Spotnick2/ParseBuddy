@@ -1,4 +1,8 @@
 ParseBuddy = {
+    messages = {},
+    Print = function(self, message)
+        self.messages[#self.messages + 1] = message
+    end,
     Summary = {
         begins = 0,
         observations = 0,
@@ -8,6 +12,11 @@ ParseBuddy = {
         Finalize = function(self, _, success)
             self.finalizes = self.finalizes + 1
             return { success = success == 1 }
+        end,
+        RecordPrimarySwitch = function(self, _, boss, reason)
+            self.switches = (self.switches or 0) + 1
+            self.lastSwitchGUID = boss and boss.guid or nil
+            self.lastSwitchReason = reason
         end,
     },
     State = {
@@ -70,6 +79,7 @@ UnitExists = function() return false end
 UnitGUID = function() return nil end
 UnitName = function() return nil end
 
+assert(loadfile("EncounterTargets.lua"))()
 assert(loadfile("Encounter.lua"))()
 
 local Encounter = ParseBuddy.Encounter
@@ -185,5 +195,52 @@ assertEqual(Encounter.primaryVisibleBoss.guid, "Creature-M", "combat-log fallbac
 Encounter:End(101, "Magtheridon", 4, 25, 1)
 Encounter:RefreshVisibleBosses(provider)
 assertEqual(#Encounter.visibleOrder, 0, "inactive refresh ignored")
+
+Encounter:Start(655, "Opera Hall", 3, 10, emptyProvider)
+local julianneGUID = "Creature-0-6066-532-101283-17534-00002B6322"
+local romuloGUID = "Creature-0-6066-532-101283-17533-00002B634D"
+local addGUID = "Creature-0-6066-532-101283-17229-0000ADD"
+assertEqual(Encounter:LearnBossFromCombatLog(julianneGUID, "Julianne"), true, "Opera registry accepts Julianne")
+assertEqual(Encounter.primaryVisibleBoss.guid, julianneGUID, "first registered target becomes primary")
+assertEqual(Encounter.primarySelectionReason, "recent-registered", "registered activity selection reason")
+ParseBuddy.State.candidatesByBoss[julianneGUID] = { spellVulnerability = { [27228] = { spellId = 27228 } } }
+assertEqual(Encounter:LearnBossFromCombatLog(romuloGUID, "Romulo"), true, "Opera registry accepts Romulo")
+assertEqual(Encounter.primaryVisibleBoss.guid, romuloGUID, "recent registered target becomes primary")
+assertEqual(ParseBuddy.State.candidatesByBoss[julianneGUID] ~= nil, true, "switching registered targets retains prior candidate state")
+ParseBuddy.State.candidatesByBoss[romuloGUID] = { majorArmor = { [25225] = { spellId = 25225 } } }
+assertEqual(Encounter:LearnBossFromCombatLog(addGUID, "Fiendish Imp"), false, "Opera registry rejects arbitrary add")
+assertEqual(Encounter.encounteredBosses[addGUID], nil, "rejected add is not retained")
+assertEqual(Encounter:ReclaimPrimaryBoss(julianneGUID), true, "relevant registered activity switches hidden primary")
+assertEqual(Encounter.primaryVisibleBoss.guid, julianneGUID, "registered reclaim selects active target")
+assertEqual(ParseBuddy.State.candidatesByBoss[romuloGUID] ~= nil, true, "registered reclaim retains other boss state")
+
+units.boss1 = { guid = julianneGUID, name = "Julianne" }
+units.boss2 = { guid = romuloGUID, name = "Romulo" }
+Encounter:RefreshVisibleBosses(provider)
+assertEqual(Encounter.primaryVisibleBoss.guid, julianneGUID, "visible boss1 has primary precedence")
+assertEqual(Encounter.primarySelectionReason, "visible-boss1", "visible boss1 reason recorded")
+assertEqual(Encounter:ReclaimPrimaryBoss(romuloGUID), false, "registered activity cannot override visible boss1")
+assertEqual(Encounter.primaryVisibleBoss.guid, julianneGUID, "visible boss1 remains primary")
+
+units.boss1 = nil
+Encounter:RefreshVisibleBosses(provider)
+assertEqual(Encounter.primaryVisibleBoss.guid, romuloGUID, "first visible registered boss selected without boss1")
+assertEqual(Encounter.primarySelectionReason, "visible-registered", "visible registered reason recorded")
+
+units.boss2 = { guid = "Creature-0-6066-532-101283-99999-UNREGISTERED", name = "Visible Add" }
+Encounter:RefreshVisibleBosses(provider)
+assertEqual(Encounter:ReclaimPrimaryBoss(julianneGUID), true, "visible unregistered non-boss1 does not block registered activity")
+assertEqual(Encounter.primaryVisibleBoss.guid, julianneGUID, "recent registered target outranks visible unregistered non-boss1")
+
+local messagesBeforeTargets = #ParseBuddy.messages
+assertEqual(Encounter:PrintTargets(), true, "target diagnostics available during encounter")
+assertEqual(#ParseBuddy.messages > messagesBeforeTargets, true, "target diagnostics print registry and accepted GUIDs")
+local combinedTargets = table.concat(ParseBuddy.messages, "\n")
+assertEqual(combinedTargets:find("npcId=17533", 1, true) ~= nil, true, "target diagnostics list Romulo NPC ID")
+assertEqual(combinedTargets:find("npcId=17534", 1, true) ~= nil, true, "target diagnostics list Julianne NPC ID")
+assertEqual(combinedTargets:find("reason=recent%-registered") ~= nil, true, "target diagnostics list primary reason")
+
+Encounter:End(655, "Opera Hall", 3, 10, 1)
+assertEqual(Encounter:PrintTargets(), false, "target diagnostics explain inactive encounter")
 
 print("ParseBuddy Encounter tests passed: " .. testsRun)

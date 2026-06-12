@@ -15,6 +15,7 @@ Automated evaluator tests run under Lua 5.1 without WoW APIs:
 & 'C:\Program Files (x86)\Lua\5.1\lua.exe' tests\test_snapshot.lua
 & 'C:\Program Files (x86)\Lua\5.1\lua.exe' tests\test_config.lua
 & 'C:\Program Files (x86)\Lua\5.1\lua.exe' tests\test_summary.lua
+& 'C:\Program Files (x86)\Lua\5.1\lua.exe' tests\test_targets.lua
 ```
 
 The first test target will be the debuff group evaluator, kept independent from the game client. Normalized fixtures derived from archived combat logs may be used to validate aura event shapes and stack transitions without uploading or bundling the original logs.

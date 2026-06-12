@@ -41,6 +41,7 @@ ParseBuddy.UI = {
 
 assert(loadfile("DebuffLibrary.lua"))()
 assert(loadfile("State.lua"))()
+assert(loadfile("EncounterTargets.lua"))()
 assert(loadfile("Encounter.lua"))()
 
 local currentEvent
@@ -120,5 +121,22 @@ now = 102
 dispatchAura("SPELL_AURA_APPLIED", "Creature-Real", "Phase Boss", 25225, "Sunder Armor")
 assertEqual(ParseBuddy.Encounter.primaryVisibleBoss.guid, "Creature-Real", "known hidden boss reclaims display from CLEU activity")
 assertEqual(ParseBuddy.State.candidatesByBoss["Creature-Real"].majorArmor[25225].stacks, 1, "reclaiming aura event is stored")
+
+ParseBuddy.Encounter:End(200, "Phase Boss", 4, 25, 1)
+now = 200
+ParseBuddy.Encounter:Start(655, "Opera Hall", 3, 10, emptyProvider)
+local julianneGUID = "Creature-0-6066-532-101283-17534-00002B6322"
+local romuloGUID = "Creature-0-6066-532-101283-17533-00002B634D"
+local operaAddGUID = "Creature-0-6066-532-101283-17229-0000ADD"
+dispatchAura("SPELL_AURA_APPLIED", julianneGUID, "Julianne", 27228, "Curse of the Elements")
+assertEqual(ParseBuddy.Encounter.primaryVisibleBoss.guid, julianneGUID, "Opera event gate accepts Julianne")
+now = 201
+dispatchAura("SPELL_AURA_APPLIED", romuloGUID, "Romulo", 25225, "Sunder Armor")
+assertEqual(ParseBuddy.Encounter.primaryVisibleBoss.guid, romuloGUID, "Opera relevant activity switches primary to Romulo")
+assertEqual(ParseBuddy.State.candidatesByBoss[julianneGUID].spellVulnerability[27228] ~= nil, true, "Opera switch retains Julianne candidates")
+assertEqual(ParseBuddy.State.candidatesByBoss[romuloGUID].majorArmor[25225] ~= nil, true, "Opera switch stores Romulo candidates")
+dispatchAura("SPELL_AURA_APPLIED", operaAddGUID, "Fiendish Imp", 25225, "Sunder Armor")
+assertEqual(ParseBuddy.State.candidatesByBoss[operaAddGUID], nil, "Opera event gate rejects unregistered add")
+assertEqual(ParseBuddy.Encounter.primaryVisibleBoss.guid, romuloGUID, "rejected Opera add cannot change primary")
 
 print("ParseBuddy integration tests passed: " .. testsRun)
