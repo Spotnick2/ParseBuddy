@@ -21,6 +21,7 @@ Equivalent effects will share one row. For example, Sunder Armor and Expose Armo
 - Curse of Recklessness armor support
 - Full List and Problems Only display modes
 - Cached solo, party, and raid class capability checks for `NOT AVAILABLE` rows
+- Optional transition-based missing-debuff broadcasts with conservative cooldowns
 - Boss encounter display with visible-boss preference and a combat-log fallback when no boss unit is exposed
 - Source player, stack, and timer information when available
 - Dependency-free, event-driven combat handling
@@ -38,6 +39,11 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - `/pb unavailable`: show whether Problems Only displays non-actionable `NOT AVAILABLE` rows
 - `/pb unavailable show`: show `NOT AVAILABLE` rows in Problems Only for the active settings scope
 - `/pb unavailable hide`: hide `NOT AVAILABLE` rows in Problems Only; this is the default
+- `/pb broadcast`: show the active-scope settings used by the next encounter
+- `/pb broadcast on|off`: enable or disable broadcasts for the active scope; off by default
+- `/pb broadcast channel party|raid|leader`: select the exact destination
+- `/pb broadcast delay <0-60>`: set the delay after pull grace before a missing group may alert
+- `/pb broadcast test`: print a deterministic local-only test message out of combat
 - `/pb profile`: show whether this character uses global or personal settings
 - `/pb profile global`: use account-wide display and group settings
 - `/pb profile personal`: use this character's settings; the first selection copies current global settings
@@ -79,7 +85,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 
 - Warcraft Logs integration or external web access
 - Post-fight parsing or scoring
-- Sounds, raid warnings, or whispers
+- Sounds or raid-warning output
 - Assignments or import/export
 - External addon or framework dependencies
 
@@ -88,14 +94,9 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - Named profiles beyond the implemented global account scope and personal per-character scope
 - Additional optional debuff groups beyond Curse of Recklessness and boss-specific profiles
 - Multi-boss display sections
-- Sounds, raid warnings, whispers, assignments, and import/export
+- Sounds, raid-warning output, assignments, and import/export
 - Multiple simultaneous boss UI sections, multi-boss uptime aggregation, and a graphical summary window
-- Optional missing-debuff broadcasts, disabled by default:
-  - configurable delay after pull/grace before announcing a required missing debuff
-  - selectable destination such as party, raid, or group leader
-  - permission-aware raid output and a safe fallback when the player cannot use the requested channel
-  - deduplicate each missing condition and apply per-group/global cooldowns to prevent repeated chat spam
-  - clear or re-arm an alert only after the group becomes satisfied and later goes missing again
+- Provider-specific whispers, assignments, talent/spec inference, and player responsibility tracking
 
 ## MVP In-Game Checks
 
@@ -118,6 +119,10 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - Missing or grace rows become gray `NOT AVAILABLE` when a complete cached roster has no baseline provider class. Incomplete roster information remains `unknown` and preserves normal missing/grace behavior.
 - Active, partial, and expiring rows remain authoritative regardless of cached capability. ParseBuddy does not infer talents, specs, learned ranks, assignments, or player responsibility.
 - Problems Only hides `NOT AVAILABLE` by default; `/pb unavailable show|hide` is scoped with global/personal settings. Full List always shows enabled unavailable rows.
+- Broadcast settings are global/personal scoped and frozen at pull. They default off and apply only to enabled, required groups whose frozen roster capability is `available`.
+- Broadcasts wait for pull grace plus the configured delay, announce once per missing period, and re-arm only after the group becomes active or expiring. Partial, optional, disabled, unavailable, unknown-roster, grace, active, and expiring rows never alert.
+- Party, raid, and cached-leader routes never fall back to another channel. Unavailable routes are suppressed with conditional local debug output. Automatic messages contain group/effect text only, not roster member names.
+- The display ticker and CLEU path never send chat. State-changing evaluations schedule a separate deferred callback, with a 30-second per-group cooldown and 5-second global spacing.
 - `/pb mode problems` and `/pb mode full` switch immediately during an encounter and persist after `/reload`.
 - Filtered rows compact without gaps, unused row slots stay hidden, and the frame height follows the visible row count.
 - Global display/group settings live in `ParseBuddyDB`; personal display/group settings live in `ParseBuddyCharDB`.
@@ -172,6 +177,10 @@ Run these checks after `/reload` with Lua errors enabled:
 19. On Opera Hall encounter `655`, run `/pb targets`. Confirm configured NPC IDs `17533` and `17534`, accepted Romulo/Julianne GUIDs, current primary, and selection reason.
 20. Apply a tracked debuff to each Opera boss. Confirm relevant activity can switch the single-primary display when no higher-priority visible target exists, both bosses retain independent candidates, and tracked effects on unregistered adds do not change the primary.
 21. Run `/pb roster` while solo, in a party, and in a raid. Confirm cached members/classes and group capabilities match the roster. Remove the only provider for a group, wait for `GROUP_ROSTER_UPDATE`, and verify its missing/grace row becomes `NOT AVAILABLE` without any repeated roster scanning during combat.
+22. Run `/pb broadcast` and confirm it is off by default. Configure a personal or global channel and delay, switch scopes, and verify both settings stores remain independent.
+23. Out of combat, run `/pb broadcast test` and confirm it prints a clearly marked local-only message. Run it during combat and confirm it is blocked.
+24. Enable broadcasts for a supervised pull. Verify a required, roster-available missing group alerts once after grace plus delay; optional, disabled, partial, `NOT AVAILABLE`, and unknown-capability groups do not alert. Apply the effect, remove it again, and verify re-alerting respects the 30-second group cooldown and 5-second global spacing.
+25. Test party, raid, and leader routes. Confirm an unavailable requested destination is suppressed without falling back, and `/pb dump` shows frozen broadcast state and pending groups without exposing player names in automatic messages.
 
 `/pb dump` metrics are cumulative for the current encounter. `cleu` counts accepted tracked aura events, `refreshes` counts display evaluations, `ticker` counts 0.2-second ticks, and `scans` is split by boss appearance, CLEU, and manual debug scans. A growing ticker count must not increase scan counts by itself.
 

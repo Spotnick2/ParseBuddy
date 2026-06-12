@@ -19,6 +19,15 @@ ParseBuddy = {
             self.lastSwitchReason = reason
         end,
     },
+    Broadcast = {
+        begins = 0,
+        observations = 0,
+        ends = 0,
+        Begin = function(self) self.begins = self.begins + 1 end,
+        Observe = function(self) self.observations = self.observations + 1 end,
+        End = function(self) self.ends = self.ends + 1 end,
+        GetDiagnosticLines = function() return { "Broadcast: active=yes enabled=no" } end,
+    },
     State = {
         resets = 0,
         candidatesByBoss = {},
@@ -117,15 +126,19 @@ assertEqual(ParseBuddy.pendingGraceDelay, 6.1, "grace refresh includes schedulin
 assertEqual(ParseBuddy.tickerInterval, 0.2, "display ticker interval")
 assertEqual(ParseBuddy.State.scans, 2, "visible bosses scanned when unit tokens appear")
 assertEqual(ParseBuddy.Summary.begins, 1, "encounter starts summary accumulator")
+assertEqual(ParseBuddy.Broadcast.begins, 1, "encounter freezes broadcast settings")
 
 local callsBeforeTicker = #ParseBuddy.UI.calls
+local broadcastObservationsBeforeTicker = ParseBuddy.Broadcast.observations
 ParseBuddy.tickerCallback()
 assertEqual(#ParseBuddy.UI.calls, callsBeforeTicker + 1, "display ticker refreshes UI")
 assertEqual(ParseBuddy.State.scans, 2, "display ticker does not scan auras")
+assertEqual(ParseBuddy.Broadcast.observations, broadcastObservationsBeforeTicker, "ordinary display ticker does not process broadcast transitions")
 local observationsBeforeExpiry = ParseBuddy.Summary.observations
 ParseBuddy.State.expireResult = true
 ParseBuddy.tickerCallback()
 assertEqual(ParseBuddy.Summary.observations, observationsBeforeExpiry + 1, "ticker records summary only when expiration changes state")
+assertEqual(ParseBuddy.Broadcast.observations, broadcastObservationsBeforeTicker + 1, "expiration boundary updates pending broadcast state without sending")
 
 units.boss1 = nil
 Encounter:RefreshVisibleBosses(provider)
@@ -162,6 +175,7 @@ assertEqual(ParseBuddy.lastEncounterSnapshot, snapshot, "snapshot retained in me
 assertEqual(ParseBuddyDB.lastEncounterSnapshot, snapshot, "snapshot retained in saved variables")
 assertEqual(summary.success, true, "encounter end returns finalized summary")
 assertEqual(ParseBuddy.Summary.finalizes, 1, "encounter end finalizes summary")
+assertEqual(ParseBuddy.Broadcast.ends > 0, true, "encounter cleanup clears broadcast state")
 
 Encounter:RefreshVisibleBosses(provider)
 assertEqual(#Encounter.visibleOrder, 0, "inactive refresh ignored")

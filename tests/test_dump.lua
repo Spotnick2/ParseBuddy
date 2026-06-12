@@ -23,6 +23,11 @@ ParseBuddy = {
             end,
         },
     },
+    Broadcast = {
+        GetDiagnosticLines = function()
+            return { "Broadcast: active=yes enabled=yes scope=global channel=raid delay=3.0 lastSentAt=none" }
+        end,
+    },
     State = {
         candidatesByBoss = {
             ["Creature-B"] = {
@@ -122,6 +127,7 @@ local lines = Encounter:BuildDumpLines()
 assertContains(lines, "Dump source: LIVE", "live dump source label")
 assertContains(lines, "Encounter: active=yes", "active encounter line")
 assertContains(lines, "Metrics: cleu=4 refreshes=12 ticker=8 scans=3", "diagnostic metrics line")
+assertContains(lines, "Broadcast: active=yes enabled=yes", "broadcast diagnostics included")
 assertContains(lines, "boss1: guid=Creature-B", "visible boss mapping")
 assertContains(lines, "Tracked candidates:", "tracked candidates heading")
 assertContains(lines, "spellId=27228", "candidate summary")

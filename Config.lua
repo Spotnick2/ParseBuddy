@@ -16,7 +16,7 @@ local function requiredText(value)
 end
 
 function PB.Config:Initialize()
-    ParseBuddyDB.schemaVersion = 3
+    ParseBuddyDB.schemaVersion = 4
     ParseBuddyDB.settings = ParseBuddyDB.settings or {}
     if ParseBuddyDB.settings.displayMode == nil and ParseBuddyDB.displayMode ~= nil then
         ParseBuddyDB.settings.displayMode = ParseBuddyDB.displayMode
@@ -24,7 +24,7 @@ function PB.Config:Initialize()
     PB.Defaults:ApplySettings(ParseBuddyDB.settings)
 
     ParseBuddyCharDB = ParseBuddyCharDB or {}
-    ParseBuddyCharDB.schemaVersion = 2
+    ParseBuddyCharDB.schemaVersion = 3
     if not VALID_SCOPES[ParseBuddyCharDB.activeScope] then
         ParseBuddyCharDB.activeScope = "global"
     end
@@ -97,6 +97,47 @@ function PB.Config:HandleUnavailableCommand(value)
     if value ~= "" and PB.Encounter and PB.Encounter.active then
         PB.Encounter:RefreshDisplay()
     end
+    return true
+end
+
+function PB.Config:GetBroadcastSettings()
+    return self:GetSettings().broadcast
+end
+
+function PB.Config:HandleBroadcastCommand(argument)
+    local command, value = (argument or ""):match("^(%S*)%s*(.-)$")
+    command = command and command:lower() or ""
+    value = value and value:lower() or ""
+    local settings = self:GetBroadcastSettings()
+
+    if command == "on" then
+        settings.enabled = true
+    elseif command == "off" then
+        settings.enabled = false
+    elseif command == "channel" then
+        if value ~= "party" and value ~= "raid" and value ~= "leader" then
+            PB:Print("Broadcast channel must be party, raid, or leader.")
+            return false
+        end
+        settings.channel = value
+    elseif command == "delay" then
+        local delay = tonumber(value)
+        if not delay or delay < 0 or delay > 60 then
+            PB:Print("Broadcast delay must be between 0 and 60 seconds.")
+            return false
+        end
+        settings.delay = delay
+    elseif command == "test" then
+        return PB.Broadcast:Test()
+    elseif command ~= "" then
+        PB:Print("Broadcast command must be on, off, channel party|raid|leader, delay 0-60, or test.")
+        return false
+    end
+
+    PB:Print(string.format(
+        "Broadcast: %s, channel=%s, delay=%.1fs, scope=%s. Changes apply next encounter.",
+        settings.enabled and "on" or "off", settings.channel, settings.delay, self:GetScope()
+    ))
     return true
 end
 

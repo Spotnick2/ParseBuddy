@@ -32,6 +32,7 @@ ParseBuddy = {
         HandleGroupCommand = function(self, value) self.groupCommand = value end,
         PrintGroups = function(self) self.groupsPrinted = (self.groupsPrinted or 0) + 1 end,
         HandleUnavailableCommand = function(self, value) self.unavailable = value end,
+        HandleBroadcastCommand = function(self, value) self.broadcast = value end,
     },
     Roster = {
         Print = function(self) self.prints = (self.prints or 0) + 1 end,
@@ -101,6 +102,11 @@ assertEqual(ParseBuddy.Roster.prints, 1, "roster slash command prints cached dia
 ParseBuddy:HandleSlashCommand("help")
 assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "unavailable", 1, true) ~= nil, true, "help lists unavailable setting")
 assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "roster", 1, true) ~= nil, true, "help lists roster diagnostics")
+
+ParseBuddy:HandleSlashCommand("broadcast channel raid")
+assertEqual(ParseBuddy.Config.broadcast, "channel raid", "broadcast slash command dispatches arguments")
+ParseBuddy:HandleSlashCommand("help")
+assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "broadcast", 1, true) ~= nil, true, "help lists broadcast commands")
 
 ParseBuddy:HandleSlashCommand("summary")
 assertEqual(ParseBuddy.Summary.prints, 1, "summary slash command prints latest summary")

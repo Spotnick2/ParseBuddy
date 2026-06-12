@@ -30,6 +30,10 @@ local function provider(mode, members, count)
             local member = members[unit]
             return member and member.name or nil
         end,
+        IsLeader = function(unit)
+            local member = members[unit]
+            return member and member.leader == true or false
+        end,
     }
 end
 
@@ -56,12 +60,13 @@ assertEqual(ParseBuddy.Roster:GetGroupCapability("judgement"), "notAvailable", "
 
 snapshot = ParseBuddy.Roster:Refresh("raid", provider("raid", {
     raid1 = { name = "Rogue", classFile = "ROGUE" },
-    raid2 = { name = "Paladin", classFile = "PALADIN" },
+    raid2 = { name = "Paladin", classFile = "PALADIN", leader = true },
 }, 2))
 assertEqual(snapshot.mode, "raid", "raid roster mode")
 assertEqual(ParseBuddy.Roster:GetGroupCapability("majorArmor"), "available", "rogue provides armor reduction")
 assertEqual(ParseBuddy.Roster:GetGroupCapability("judgement"), "available", "paladin provides judgement")
 assertEqual(ParseBuddy.Roster:GetGroupCapability("attackSpeed"), "notAvailable", "raid without warrior cannot provide attack speed slow")
+assertEqual(ParseBuddy.Roster:GetLeaderName(), "Paladin", "raid leader cached for private broadcast routing")
 
 snapshot = ParseBuddy.Roster:Refresh("incomplete", provider("party", {
     player = { name = "Priest", classFile = "PRIEST" },

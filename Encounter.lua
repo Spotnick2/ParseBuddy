@@ -54,6 +54,9 @@ function PB.Encounter:Reset()
     self.visibleOrder = {}
     self.primaryVisibleBoss = nil
     self.primarySelectionReason = nil
+    if PB.Broadcast then
+        PB.Broadcast:End()
+    end
     PB.State:ResetEncounter()
 end
 
@@ -106,6 +109,9 @@ function PB.Encounter:Start(encounterId, encounterName, difficultyId, groupSize,
     }
     if PB.Summary then
         PB.Summary:Begin(self.encounter)
+    end
+    if PB.Broadcast then
+        PB.Broadcast:Begin(self.encounter)
     end
 
     PB.UI:ShowEncounter(self.encounter, nil)
@@ -622,6 +628,9 @@ function PB.Encounter:RefreshDisplay(recordSummary)
         if PB.Summary and (recordSummary or expired) then
             PB.Summary:Observe(now, boss.guid)
         end
+        if PB.Broadcast and (recordSummary or expired) then
+            PB.Broadcast:Observe(now, evaluations)
+        end
     elseif PB.Summary and recordSummary then
         PB.Summary:Observe(GetTime(), nil)
     end
@@ -734,6 +743,13 @@ function PB.Encounter:BuildDumpLines(options)
         formatBool(primaryBoss and primaryBoss.matchesEncounterName),
         formatMaybe(self.primarySelectionReason)
     ))
+    if PB.Broadcast then
+        local broadcastLines = PB.Broadcast:GetDiagnosticLines()
+        local broadcastIndex
+        for broadcastIndex = 1, #broadcastLines do
+            appendLine(lines, broadcastLines[broadcastIndex])
+        end
+    end
 
     appendLine(lines, "Visible boss units:")
     local index

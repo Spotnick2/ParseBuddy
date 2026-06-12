@@ -25,6 +25,11 @@ PB.Defaults = {
 PB.Defaults.settings = {
     displayMode = "PROBLEMS_ONLY",
     showUnavailable = false,
+    broadcast = {
+        enabled = false,
+        channel = "raid",
+        delay = 3,
+    },
     groups = {
         spellVulnerability = { enabled = true, required = true },
         majorArmor = { enabled = true, required = true },

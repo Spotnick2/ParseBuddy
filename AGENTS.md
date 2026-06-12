@@ -31,6 +31,8 @@ Tagline: "Your wingman for cleaner raid parses."
 - Live display filtering is a UI concern. Problems Only hides healthy active rows and shows required missing/grace, partial, expiring, and unknown-source rows; Full List shows every enabled group. Test mode and diagnostics remain unfiltered.
 - Roster capability is class-based and cached only on `PLAYER_ENTERING_WORLD`, `GROUP_ROSTER_UPDATE`, and encounter start. Never scan roster units from CLEU, the display ticker, evaluation, or UI rendering. A complete roster with no baseline provider yields `notAvailable`; incomplete data yields `unknown`; observed active effects always take precedence.
 - Do not infer talents, specs, improved effects, learned ranks, assignments, or responsibility from class presence. `NOT AVAILABLE` is informational and hidden by default in Problems Only through a scoped setting; Full List always shows enabled unavailable groups.
+- Missing-debuff broadcasts are opt-in and frozen at encounter start. Only enabled, required, roster-available groups may alert after grace plus delay. Alerts are transition-based, re-arm only after satisfaction, and use separate deferred callbacks with global and per-group cooldowns. Never send chat directly from CLEU, aura scans, UI rendering, or the display ticker.
+- Broadcast destinations are explicit party, raid, or cached group leader. If the selected destination is unavailable, suppress the alert and emit only conditional local debug output. Never fall back to another public channel or include roster member names in automatic broadcast text.
 - Global settings use `ParseBuddyDB.settings`; per-character personal settings use `ParseBuddyCharDB.settings`, selected by `ParseBuddyCharDB.activeScope`. Frame position, scale, opacity, and lock state remain account-wide in `ParseBuddyDB.frame`.
 - Personal settings are copied from current global settings only on first selection. Scope switching must preserve both stores without merging or overwriting later edits.
 - The encounter summary is group-level, single-primary, and memory-only. It accrues satisfied, partial, and missing intervals after grace from evaluator transitions; it must not retain raw CLEU history, score players, scan auras, or persist summaries across reloads.
@@ -94,6 +96,7 @@ Do not implement more than the requested milestone. The first priorities are add
 - `EncounterTargets.lua`: static encounter-ID to NPC-ID target registry and Lua 5.1-compatible Creature/Vehicle GUID parsing.
 - `State.lua`: encounter candidate state, deterministic group evaluation, known-duration expiry, and injectable single-unit aura resync.
 - `Summary.lua`: frozen encounter settings and in-memory group-level uptime interval accounting and output.
+- `Broadcast.lua`: frozen opt-in alert settings, pending transition state, bounded deferred delivery, cooldowns, and chat routing.
 - `Encounter.lua`: encounter lifecycle, boss GUID/unit-token tracking, opportunistic scan triggers, and the display-only ticker.
 - `Events.lua`: event registration and lightweight CLEU dispatch.
 - `Config.lua`: global/personal scope selection, scoped display/group settings, and slash-command settings access. No configuration UI yet.
@@ -113,6 +116,7 @@ Verify the TOC Interface against the installed TBC Anniversary client before rel
 - `/pb mode problems|full` changes the persisted live encounter display mode. `/pb test` must remain deterministic and unfiltered.
 - `/pb profile global|personal`, `/pb groups`, and `/pb group <key> ...` manage scoped settings. Stable group keys are part of the command contract.
 - `/pb unavailable show|hide` controls the scoped Problems Only visibility of `NOT AVAILABLE` rows; `/pb roster` prints the cache and must not refresh it.
+- `/pb broadcast on|off`, `/pb broadcast channel party|raid|leader`, and `/pb broadcast delay 0-60` manage scoped next-encounter alert settings. `/pb broadcast test` is explicit, deterministic, local-only, and blocked in combat.
 - `/pb snapshot` prints the automatically captured diagnostic snapshot from the most recently completed encounter.
 - `/pb clear` clears both `ParseBuddy.lastEncounterSnapshot` and `ParseBuddyDB.lastEncounterSnapshot`.
 - `/pb summary` prints the latest in-memory summary; `/pb summary auto on|off` controls account-wide automatic output, off by default. `/pb clear` also clears the completed summary without stopping an active accumulator.
@@ -129,4 +133,4 @@ Verify the TOC Interface against the installed TBC Anniversary client before rel
 ## Deferred Optional Features
 
 - Multiple boss UI sections, multi-boss summary aggregation, a graphical summary window, historical summaries, and persistence remain deferred. Do not turn summaries into player scoring, blame, ranking, or a full post-raid parser.
-- Missing-debuff broadcasts may later be added only as an opt-in, off-by-default feature. Support explicit party, raid, or leader destinations; respect channel permissions; use pull/grace delays, transition-based deduplication, and per-group/global cooldowns; and never produce repeated raid/whisper spam from the ticker or CLEU hot path.
+- Sounds, assignments, provider whispers, talent/spec inspection, additional groups, import/export, a configuration window, and player scoring remain deferred.

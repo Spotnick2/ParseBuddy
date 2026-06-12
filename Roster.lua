@@ -23,6 +23,9 @@ local runtimeProvider = {
     Name = function(unitToken)
         return UnitName and UnitName(unitToken) or nil
     end,
+    IsLeader = function(unitToken)
+        return UnitIsGroupLeader and UnitIsGroupLeader(unitToken) or false
+    end,
 }
 
 local function addMember(snapshot, provider, unitToken)
@@ -43,6 +46,9 @@ local function addMember(snapshot, provider, unitToken)
     }
     if classFile then
         snapshot.classes[classFile] = true
+    end
+    if provider.IsLeader and provider.IsLeader(unitToken) then
+        snapshot.leaderName = name
     end
 end
 
@@ -109,6 +115,10 @@ function PB.Roster:GetGroupCapability(groupKey)
         return "unknown"
     end
     return self.snapshot.capabilities[groupKey] or "unknown"
+end
+
+function PB.Roster:GetLeaderName()
+    return self.snapshot and self.snapshot.leaderName or nil
 end
 
 function PB.Roster:Print()
