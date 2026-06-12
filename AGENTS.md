@@ -124,3 +124,5 @@ Verify the TOC Interface against the installed TBC Anniversary client before rel
 ## Deferred Optional Features
 
 - Multiple boss UI sections, multi-boss summary aggregation, a graphical summary window, historical summaries, and persistence remain deferred. Do not turn summaries into player scoring, blame, ranking, or a full post-raid parser.
+- Roster-aware group availability may later distinguish `NOT AVAILABLE` from `MISSING`. Compute capability from roster/class metadata on roster changes or other low-frequency events, never by scanning the raid in CLEU or on the display ticker. Treat talent/spec/rank-dependent effects as unknown unless reliable evidence exists; do not infer Improved Faerie Fire, Malediction, improved Demo Shout/Thunder Clap, or assignments from class presence alone.
+- Missing-debuff broadcasts may later be added only as an opt-in, off-by-default feature. Support explicit party, raid, or leader destinations; respect channel permissions; use pull/grace delays, transition-based deduplication, and per-group/global cooldowns; and never produce repeated raid/whisper spam from the ticker or CLEU hot path.

@@ -85,6 +85,17 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - Multi-boss display sections
 - Sounds, raid warnings, whispers, assignments, and import/export
 - Multiple simultaneous boss UI sections, multi-boss uptime aggregation, and a graphical summary window
+- Roster-aware debuff availability:
+  - infer whether any current party or raid member's class can provide an enabled debuff group
+  - show `NOT AVAILABLE` instead of `MISSING` when no roster member can provide any equivalent effect in the group
+  - keep talent-dependent effects conservative; class presence alone must not claim a talent, spec, learned rank, or assignment is available
+  - refresh availability outside the CLEU hot path when the roster changes, not through repeated in-combat raid scans
+- Optional missing-debuff broadcasts, disabled by default:
+  - configurable delay after pull/grace before announcing a required missing debuff
+  - selectable destination such as party, raid, or group leader
+  - permission-aware raid output and a safe fallback when the player cannot use the requested channel
+  - deduplicate each missing condition and apply per-group/global cooldowns to prevent repeated chat spam
+  - clear or re-arm an alert only after the group becomes satisfied and later goes missing again
 
 ## MVP In-Game Checks
 
