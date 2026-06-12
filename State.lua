@@ -407,13 +407,14 @@ local function candidatesAsArray(candidatesBySpell)
     return candidates
 end
 
-function PB.State:EvaluateBoss(bossGUID, now, warningThreshold, graceActive)
+function PB.State:EvaluateBoss(bossGUID, now, warningThreshold, graceActive, settingsByGroup)
     local bossCandidates = self.candidatesByBoss[bossGUID] or {}
     local evaluations = {}
     local index
 
     for index, group in ipairs(PB.DebuffLibrary.groups) do
-        local groupSettings = PB.Config and PB.Config:GetGroupSettings(group.key) or {
+        local groupSettings = settingsByGroup and settingsByGroup[group.key]
+            or PB.Config and PB.Config:GetGroupSettings(group.key) or {
             enabled = true,
             required = group.required,
         }

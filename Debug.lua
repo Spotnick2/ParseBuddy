@@ -47,7 +47,10 @@ function PB:ClearSnapshot()
     if ParseBuddyDB then
         ParseBuddyDB.lastEncounterSnapshot = nil
     end
-    self:Print("Encounter snapshot cleared.")
+    if self.Summary then
+        self.Summary:Clear()
+    end
+    self:Print("Encounter snapshot and summary cleared.")
 end
 
 function PB:ValidateSpellIds(spellProvider)

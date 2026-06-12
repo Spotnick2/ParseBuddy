@@ -10,7 +10,7 @@ local function trim(value)
 end
 
 local function showHelp()
-    PB:Print("Commands: /pb help, test, mode [problems|full], profile [global|personal], groups, group <key> [enable|disable|required|optional], dump, snapshot, clear, debugscan, validate, lock, unlock, reset, scale [0.6-1.4], opacity [0.2-1.0], debug")
+    PB:Print("Commands: /pb help, test, mode [problems|full], profile [global|personal], groups, group <key> [enable|disable|required|optional], summary [auto on|off], dump, snapshot, clear, debugscan, validate, lock, unlock, reset, scale [0.6-1.4], opacity [0.2-1.0], debug")
 end
 
 function PB:HandleSlashCommand(message)
@@ -30,6 +30,15 @@ function PB:HandleSlashCommand(message)
         PB.Config:HandleGroupCommand(argument)
     elseif command == "groups" then
         PB.Config:PrintGroups()
+    elseif command == "summary" then
+        local summaryCommand, summaryValue = argument:match("^(%S*)%s*(.-)$")
+        if summaryCommand == "auto" then
+            PB.Summary:SetAuto(summaryValue)
+        elseif summaryCommand == "" then
+            PB.Summary:Print()
+        else
+            PB:Print("Summary command must be '/pb summary' or '/pb summary auto on|off'.")
+        end
     elseif command == "lock" then
         PB.UI:Lock()
     elseif command == "unlock" then

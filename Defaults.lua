@@ -4,6 +4,7 @@ PB.Defaults = {
     values = {
         schemaVersion = 1,
         debug = false,
+        summaryAuto = false,
         frame = {
             locked = false,
             scale = 1,

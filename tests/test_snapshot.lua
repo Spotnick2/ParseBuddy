@@ -4,6 +4,10 @@ ParseBuddy = {
         self.messages[#self.messages + 1] = message
     end,
     Encounter = { active = false },
+    Summary = {
+        clears = 0,
+        Clear = function(self) self.clears = self.clears + 1 end,
+    },
 }
 ParseBuddyDB = {}
 
@@ -35,6 +39,7 @@ assertEqual(ParseBuddy:PrintSnapshot(), true, "explicit snapshot command succeed
 ParseBuddy:ClearSnapshot()
 assertEqual(ParseBuddy.lastEncounterSnapshot, nil, "clear removes in-memory snapshot")
 assertEqual(ParseBuddyDB.lastEncounterSnapshot, nil, "clear removes persisted snapshot")
+assertEqual(ParseBuddy.Summary.clears, 1, "clear also removes in-memory encounter summary")
 assertEqual(ParseBuddy:PrintSnapshot(), false, "snapshot command reports cleared state")
 
 print("ParseBuddy snapshot tests passed: " .. testsRun)

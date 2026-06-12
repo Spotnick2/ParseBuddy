@@ -1,4 +1,15 @@
 ParseBuddy = {
+    Summary = {
+        begins = 0,
+        observations = 0,
+        finalizes = 0,
+        Begin = function(self) self.begins = self.begins + 1 end,
+        Observe = function(self) self.observations = self.observations + 1 end,
+        Finalize = function(self, _, success)
+            self.finalizes = self.finalizes + 1
+            return { success = success == 1 }
+        end,
+    },
     State = {
         resets = 0,
         candidatesByBoss = {},
@@ -10,7 +21,12 @@ ParseBuddy = {
             self.lastScanGUID = bossGUID
             return true, 2
         end,
-        ExpireBoss = function(self) self.expirations = (self.expirations or 0) + 1 end,
+        ExpireBoss = function(self)
+            self.expirations = (self.expirations or 0) + 1
+            local result = self.expireResult
+            self.expireResult = false
+            return result
+        end,
         EvaluateBoss = function() return { { state = "missing" } } end,
     },
     UI = {
@@ -90,11 +106,16 @@ assertEqual(type(ParseBuddy.pendingGrace), "function", "grace callback scheduled
 assertEqual(ParseBuddy.pendingGraceDelay, 6.1, "grace refresh includes scheduling padding")
 assertEqual(ParseBuddy.tickerInterval, 0.2, "display ticker interval")
 assertEqual(ParseBuddy.State.scans, 2, "visible bosses scanned when unit tokens appear")
+assertEqual(ParseBuddy.Summary.begins, 1, "encounter starts summary accumulator")
 
 local callsBeforeTicker = #ParseBuddy.UI.calls
 ParseBuddy.tickerCallback()
 assertEqual(#ParseBuddy.UI.calls, callsBeforeTicker + 1, "display ticker refreshes UI")
 assertEqual(ParseBuddy.State.scans, 2, "display ticker does not scan auras")
+local observationsBeforeExpiry = ParseBuddy.Summary.observations
+ParseBuddy.State.expireResult = true
+ParseBuddy.tickerCallback()
+assertEqual(ParseBuddy.Summary.observations, observationsBeforeExpiry + 1, "ticker records summary only when expiration changes state")
 
 units.boss1 = nil
 Encounter:RefreshVisibleBosses(provider)
@@ -118,7 +139,7 @@ assertEqual(Encounter.primaryVisibleBoss.guid, "Creature-A", "reclaimed boss bec
 ParseBuddy.pendingGrace()
 assertEqual(ParseBuddy.UI.calls[#ParseBuddy.UI.calls][1], "update", "grace callback refreshes display")
 
-local _, _, snapshot = Encounter:End(100, "Test Encounter", 3, 10, 1)
+local _, _, snapshot, summary = Encounter:End(100, "Test Encounter", 3, 10, 1)
 assertEqual(Encounter.active, false, "encounter ended")
 assertEqual(next(Encounter.encounteredBosses), nil, "encountered bosses reset at end")
 assertEqual(ParseBuddy.UI.calls[#ParseBuddy.UI.calls][1], "hide", "encounter UI hidden")
@@ -129,6 +150,8 @@ assertEqual(snapshot.capturedAt, 123456, "snapshot records wall-clock capture ti
 assertEqual(snapshot.schemaVersion, 2, "snapshot schema includes live and raw diagnostics")
 assertEqual(ParseBuddy.lastEncounterSnapshot, snapshot, "snapshot retained in memory")
 assertEqual(ParseBuddyDB.lastEncounterSnapshot, snapshot, "snapshot retained in saved variables")
+assertEqual(summary.success, true, "encounter end returns finalized summary")
+assertEqual(ParseBuddy.Summary.finalizes, 1, "encounter end finalizes summary")
 
 Encounter:RefreshVisibleBosses(provider)
 assertEqual(#Encounter.visibleOrder, 0, "inactive refresh ignored")

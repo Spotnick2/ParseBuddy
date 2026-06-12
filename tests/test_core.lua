@@ -31,6 +31,10 @@ ParseBuddy = {
         HandleGroupCommand = function(self, value) self.groupCommand = value end,
         PrintGroups = function(self) self.groupsPrinted = (self.groupsPrinted or 0) + 1 end,
     },
+    Summary = {
+        Print = function(self) self.prints = (self.prints or 0) + 1 end,
+        SetAuto = function(self, value) self.auto = value end,
+    },
 }
 
 CreateFrame = function()
@@ -84,6 +88,13 @@ assertEqual(ParseBuddy.Config.groupsPrinted, 1, "groups slash command lists sett
 ParseBuddy:HandleSlashCommand("help")
 assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "profile", 1, true) ~= nil, true, "help lists profile scope")
 assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "group", 1, true) ~= nil, true, "help lists group commands")
+
+ParseBuddy:HandleSlashCommand("summary")
+assertEqual(ParseBuddy.Summary.prints, 1, "summary slash command prints latest summary")
+ParseBuddy:HandleSlashCommand("summary auto on")
+assertEqual(ParseBuddy.Summary.auto, "on", "summary auto slash command dispatches value")
+ParseBuddy:HandleSlashCommand("help")
+assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "summary", 1, true) ~= nil, true, "help lists summary commands")
 
 ParseBuddy:HandleSlashCommand("snapshot")
 assertEqual(ParseBuddy.snapshots, 1, "snapshot slash command prints saved snapshot")

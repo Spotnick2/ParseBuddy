@@ -76,7 +76,7 @@ function PB.Events:HandleCombatLogEvent()
         if subevent ~= "SPELL_AURA_REMOVED" then
             PB.Encounter:RecordMeaningfulLiveState(observedAt)
         end
-        PB.Encounter:RefreshDisplay()
+        PB.Encounter:RefreshDisplay(true)
     end
 end
 

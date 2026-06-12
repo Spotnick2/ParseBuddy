@@ -92,6 +92,9 @@ function PB.Encounter:Start(encounterId, encounterName, difficultyId, groupSize,
             trackedAurasSeen = 0,
         },
     }
+    if PB.Summary then
+        PB.Summary:Begin(self.encounter)
+    end
 
     PB.UI:ShowEncounter(self.encounter, nil)
     self:RefreshVisibleBosses(unitProvider)
@@ -100,17 +103,19 @@ function PB.Encounter:Start(encounterId, encounterName, difficultyId, groupSize,
     local generation = self.generation
     C_Timer.After(ParseBuddyDB.pullGracePeriod + GRACE_REFRESH_PADDING, function()
         if self.active and self.generation == generation then
-            self:RefreshDisplay()
+            self:RefreshDisplay(true)
         end
     end)
 end
 
 function PB.Encounter:End(encounterId, encounterName, difficultyId, groupSize, success)
     local endedEncounter = self.encounter
+    local endedAt = GetTime()
+    local summary = PB.Summary and PB.Summary:Finalize(endedAt, success) or nil
     local snapshot = self:CaptureSnapshot(success)
     self:Reset()
     PB.UI:HideEncounter()
-    return endedEncounter, success, snapshot
+    return endedEncounter, success, snapshot, summary
 end
 
 function PB.Encounter:CaptureSnapshot(success)
@@ -308,7 +313,7 @@ function PB.Encounter:RefreshVisibleBosses(unitProvider)
         self.primaryVisibleBoss = nil
     end
     self:RecordMeaningfulLiveState()
-    self:RefreshDisplay()
+    self:RefreshDisplay(true)
 end
 
 function PB.Encounter:ResyncBossGUID(guid, reason, auraProvider, ignoredSpellId)
@@ -364,7 +369,7 @@ function PB.Encounter:DebugScan(auraProvider)
             trackedAuras = trackedAuras + trackedCount
         end
     end
-    self:RefreshDisplay()
+    self:RefreshDisplay(true)
     PB:Print(string.format("Scanned %d visible boss unit(s); found %d tracked aura(s).", scannedBosses, trackedAuras))
     return scannedBosses, trackedAuras
 end
@@ -455,7 +460,7 @@ function PB.Encounter:IsGraceActive(now)
     return now - self.encounter.startedAt < ParseBuddyDB.pullGracePeriod
 end
 
-function PB.Encounter:RefreshDisplay()
+function PB.Encounter:RefreshDisplay(recordSummary)
     if not self.active then
         return
     end
@@ -479,6 +484,11 @@ function PB.Encounter:RefreshDisplay()
         if expired then
             self:RecordMeaningfulLiveState(now, evaluations)
         end
+        if PB.Summary and (recordSummary or expired) then
+            PB.Summary:Observe(now, boss.guid)
+        end
+    elseif PB.Summary and recordSummary then
+        PB.Summary:Observe(GetTime(), nil)
     end
     PB.UI:UpdateEncounter(self.encounter, boss, evaluations)
 end

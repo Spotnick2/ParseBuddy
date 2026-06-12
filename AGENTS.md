@@ -31,6 +31,8 @@ Tagline: "Your wingman for cleaner raid parses."
 - Live display filtering is a UI concern. Problems Only hides healthy active rows and shows required missing/grace, partial, expiring, and unknown-source rows; Full List shows every enabled group. Test mode and diagnostics remain unfiltered.
 - Global settings use `ParseBuddyDB.settings`; per-character personal settings use `ParseBuddyCharDB.settings`, selected by `ParseBuddyCharDB.activeScope`. Frame position, scale, opacity, and lock state remain account-wide in `ParseBuddyDB.frame`.
 - Personal settings are copied from current global settings only on first selection. Scope switching must preserve both stores without merging or overwriting later edits.
+- The encounter summary is group-level, single-primary, and memory-only. It accrues satisfied, partial, and missing intervals after grace from evaluator transitions; it must not retain raw CLEU history, score players, scan auras, or persist summaries across reloads.
+- Freeze summary scope, display mode, enabled flags, and required flags at encounter start. Mid-fight settings changes must not alter the active summary.
 - Combat-log fallback discovery may learn non-friendly NPC destinations, including neutral encounter targets such as Midnight, and never from a full aura-removal event. Continue rejecting players, pets, guardians, and friendly NPCs.
 - A boss previously exposed through `boss1`-`boss5`, or matching the encounter name, takes precedence over newly discovered fallback adds. Relevant activity from a known hidden boss may reclaim the single-boss display.
 
@@ -84,6 +86,7 @@ Do not implement more than the requested milestone. The first priorities are add
 - `UI.lua`: frame, compact row rendering, display-mode filtering, movement, lock state, and test mode.
 - `DebuffLibrary.lua`: static group definitions and spell-ID lookup tables.
 - `State.lua`: encounter candidate state, deterministic group evaluation, known-duration expiry, and injectable single-unit aura resync.
+- `Summary.lua`: frozen encounter settings and in-memory group-level uptime interval accounting and output.
 - `Encounter.lua`: encounter lifecycle, boss GUID/unit-token tracking, opportunistic scan triggers, and the display-only ticker.
 - `Events.lua`: event registration and lightweight CLEU dispatch.
 - `Config.lua`: global/personal scope selection, scoped display/group settings, and slash-command settings access. No configuration UI yet.
@@ -104,6 +107,7 @@ Verify the TOC Interface against the installed TBC Anniversary client before rel
 - `/pb profile global|personal`, `/pb groups`, and `/pb group <key> ...` manage scoped settings. Stable group keys are part of the command contract.
 - `/pb snapshot` prints the automatically captured diagnostic snapshot from the most recently completed encounter.
 - `/pb clear` clears both `ParseBuddy.lastEncounterSnapshot` and `ParseBuddyDB.lastEncounterSnapshot`.
+- `/pb summary` prints the latest in-memory summary; `/pb summary auto on|off` controls account-wide automatic output, off by default. `/pb clear` also clears the completed summary without stopping an active accumulator.
 
 ## Diagnostic Snapshot Lifecycle
 
@@ -111,14 +115,8 @@ Verify the TOC Interface against the installed TBC Anniversary client before rel
 - Keep exactly one snapshot in memory and in `ParseBuddyDB`; use only scalar values, plain tables, and formatted strings safe for SavedVariables serialization.
 - Retain the previous completed snapshot when a new encounter starts. Replace it only when the new encounter ends.
 - Out of combat, `/pb dump` may fall back to the latest snapshot. `/pb snapshot` always prints the latest completed snapshot.
-- The snapshot is diagnostic evidence, not the deferred uptime summary. Do not add scoring, historical accumulation, or raw CLEU event storage.
+- The snapshot is diagnostic evidence, not the uptime summary. Do not add scoring, historical accumulation, or raw CLEU event storage.
 
 ## Deferred Optional Features
 
-- A post-encounter uptime summary may be implemented only when explicitly requested as a separate post-MVP milestone.
-- It must derive uptime from ParseBuddy's in-memory real-time encounter state, not Warcraft Logs, archived combat logs, uploads, scraping, or external calls.
-- It should calculate uptime for each monitored debuff group when the encounter ends, with an option to display automatically.
-- `/pb summary` should display the most recent encounter summary.
-- Keep only the latest summary in memory. Clear it on `/pb clear` or when a new boss encounter starts.
-- Do not persist summaries across `/reload` or logout unless explicitly requested later.
-- Do not turn the summary into player scoring, blame, ranking, or a full post-raid parser.
+- Multi-boss summary aggregation, a graphical summary window, historical summaries, and persistence remain deferred. Do not turn summaries into player scoring, blame, ranking, or a full post-raid parser.

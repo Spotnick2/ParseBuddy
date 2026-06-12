@@ -41,6 +41,9 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - `/pb group <key>`: show one group's active-scope settings
 - `/pb group <key> enable|disable`: change whether a group is evaluated and displayed
 - `/pb group <key> required|optional`: change whether missing/grace is a problem in Problems Only
+- `/pb summary`: print the most recently completed encounter's in-memory uptime summary
+- `/pb summary auto on`: automatically print the summary when an encounter ends
+- `/pb summary auto off`: disable automatic summary output; this is the account-wide default
 - `/pb dump`: print explicitly labeled live diagnostics, or the completed snapshot when no encounter is active
 - `/pb snapshot`: print the automatically captured diagnostic snapshot from the most recently completed encounter
 - `/pb clear`: clear the in-memory and persisted diagnostic snapshot
@@ -80,12 +83,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - Additional optional debuff groups beyond Curse of Recklessness and boss-specific profiles
 - Multi-boss display sections
 - Sounds, raid warnings, whispers, assignments, and import/export
-- Optional post-encounter debuff uptime summary based only on ParseBuddy's in-memory live encounter state:
-  - calculate uptime for every monitored debuff group when the encounter ends
-  - optionally show the summary automatically after the fight
-  - `/pb summary` reopens the most recent encounter summary
-  - retain only the latest summary in memory until `/pb clear` or the next boss encounter starts
-  - no Warcraft Logs calls, combat-log file parsing, scoring, upload, or persistence across reloads
+- Multi-boss uptime aggregation and a graphical summary window
 
 ## MVP In-Game Checks
 
@@ -111,6 +109,10 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - Frame position, scale, opacity, and lock state remain account-wide regardless of active profile scope.
 - All groups default enabled. Curse of Recklessness defaults optional; the six original groups default required.
 - Disabled groups are absent from both display modes. Optional missing/grace rows are hidden in Problems Only, while optional partial, expiring, and unknown-source rows remain visible.
+- Encounter summaries track group-level satisfied, partial, and missing intervals after the pull grace period. Active and expiring count as satisfied; equivalent effects share one group timeline without false gaps.
+- Summary settings are frozen at encounter start, including scope, display mode, enabled flags, and required flags. Mid-fight configuration changes do not rewrite the active summary.
+- Summaries are single-primary-boss and memory-only. The latest summary is cleared by `/pb clear`, a new encounter, or `/reload`; diagnostic snapshots remain separately persisted.
+- Automatic summary output is account-wide, off by default, and does not send raid messages.
 - Starting a supported encounter shows the primary boss and all seven live group rows. Visible `bossN` units are preferred, but a tracked combat-log boss target can seed the display when no unit is exposed.
 - Missing groups are gray during pull grace and red afterward.
 - Applying, refreshing, stacking, or removing a tracked boss debuff updates its group row immediately.
@@ -144,10 +146,13 @@ Run these checks after `/reload` with Lua errors enabled:
 13. On a phase transition, verify an unrelated add cannot replace a previously visible boss and relevant activity can reclaim the known boss.
 14. End or wipe the encounter. Confirm the ticker stops and the frame hides without stale test or encounter rows.
 15. After combat, run `/pb snapshot` and `/pb dump`. Confirm both show `COMPLETED SNAPSHOT`, `active=no`, final raw candidates, final evaluations, and the retained last meaningful live evaluations. Reload once and confirm the snapshot remains available, then clear it with `/pb clear`.
+16. Run `/pb summary`. Confirm total duration, grace-excluded measured duration, frozen scope/mode, and per-enabled-group satisfied/partial/missing seconds and percentages.
+17. Verify Sunder partial-to-five-stack and Sunder-to-Expose handoffs produce the expected group totals without a false missing gap. Let a known-duration effect expire without a removal event and confirm missing time begins at expiration.
+18. Enable `/pb summary auto on`, complete or wipe an encounter, and confirm automatic output. Disable it afterward and verify `/pb clear` clears both the diagnostic snapshot and completed summary.
 
 `/pb dump` metrics are cumulative for the current encounter. `cleu` counts accepted tracked aura events, `refreshes` counts display evaluations, `ticker` counts 0.2-second ticks, and `scans` is split by boss appearance, CLEU, and manual debug scans. A growing ticker count must not increase scan counts by itself.
 
-The diagnostic snapshot is separate from the deferred uptime summary. It stores one bounded final raw view and one bounded last-meaningful live evaluation view plus encounter metadata in memory and `ParseBuddyDB`. It does not calculate uptime. WoW writes SavedVariables during a clean `/reload`, logout, or client exit; an abrupt client crash may still lose the latest persisted copy.
+The persisted diagnostic snapshot is separate from the in-memory uptime summary. The snapshot stores one bounded final raw view and one bounded last-meaningful live evaluation view plus encounter metadata in `ParseBuddyDB`. The uptime summary stores only interval totals for the latest completed encounter and is intentionally not written to SavedVariables. WoW writes snapshot SavedVariables during a clean `/reload`, logout, or client exit; an abrupt client crash may still lose the latest persisted copy.
 
 Known-duration effects expire locally even if CLEU removal is missed. Visible boss auras are rescanned only when a boss unit appears, after relevant CLEU activity, or through `/pb debugscan`. The 0.2-second display ticker updates timers and expiration state only; it never scans auras. Variable-duration effects such as Expose Armor rely on client aura expiration data when a visible boss unit is available.
 
