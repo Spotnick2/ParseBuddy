@@ -13,6 +13,7 @@ PB.Encounter = {
 local BOSS_UNIT_COUNT = 5
 local GRACE_REFRESH_PADDING = 0.1
 local DISPLAY_REFRESH_INTERVAL = 0.2
+local REMOVAL_BATCH_DELAY = 0.3
 
 local function appendLine(lines, value)
     lines[#lines + 1] = value
@@ -119,8 +120,14 @@ function PB.Encounter:CaptureSnapshot(success)
 
     local endedAt = GetTime()
     local wallClock = time and time() or 0
-    local lines = self:BuildDumpLines()
-    table.insert(lines, 2, string.format(
+    local finalRawCandidateLines = self:BuildCandidateLines("Final raw candidate state:")
+    local lines = self:BuildDumpLines({
+        source = "COMPLETED SNAPSHOT",
+        reportActive = false,
+        candidateHeading = "Final raw candidate state:",
+        evaluationHeading = "Final evaluations:",
+    })
+    table.insert(lines, 3, string.format(
         "Snapshot: name=%s success=%s duration=%.1f capturedAt=%s",
         formatMaybe(self.encounter.name),
         formatBool(success == 1 or success == true),
@@ -129,7 +136,7 @@ function PB.Encounter:CaptureSnapshot(success)
     ))
 
     local snapshot = {
-        schemaVersion = 1,
+        schemaVersion = 2,
         encounterId = self.encounter.id,
         encounterName = self.encounter.name,
         difficultyId = self.encounter.difficultyId,
@@ -138,11 +145,113 @@ function PB.Encounter:CaptureSnapshot(success)
         endedAt = endedAt,
         capturedAt = wallClock,
         success = success == 1 or success == true,
+        finalRawCandidateLines = finalRawCandidateLines,
+        lastMeaningfulLive = self.encounter.lastMeaningfulLive,
         lines = lines,
     }
+    appendLine(lines, "Last meaningful live evaluations:")
+    local live = snapshot.lastMeaningfulLive
+    if live and live.lines then
+        appendLine(lines, string.format(
+            "  capturedAt=%.1f bossGUID=%s bossName=%s",
+            tonumber(live.capturedAt) or 0,
+            formatMaybe(live.bossGUID),
+            formatMaybe(live.bossName)
+        ))
+        local index
+        for index = 1, #live.lines do
+            appendLine(lines, live.lines[index])
+        end
+    else
+        appendLine(lines, "  none - no satisfying live evaluation was observed")
+    end
     PB.lastEncounterSnapshot = snapshot
     ParseBuddyDB.lastEncounterSnapshot = snapshot
     return snapshot
+end
+
+function PB.Encounter:BuildEvaluationLines(evaluations)
+    local lines = {}
+    local _, evaluation
+    for _, evaluation in ipairs(evaluations or {}) do
+        local row = PB.UI:EvaluationToRowData(evaluation)
+        appendLine(lines, string.format(
+            "  %s: %s - %s - %s",
+            formatMaybe(row.group),
+            formatMaybe(row.effect),
+            formatMaybe(row.source),
+            formatMaybe(row.status)
+        ))
+    end
+    return lines
+end
+
+function PB.Encounter:RecordMeaningfulLiveState(now, evaluations)
+    if not self.active or not self.encounter or not self.primaryVisibleBoss then
+        return false
+    end
+
+    now = now or GetTime()
+    evaluations = evaluations or PB.State:EvaluateBoss(
+        self.primaryVisibleBoss.guid,
+        now,
+        ParseBuddyDB.warningThreshold,
+        self:IsGraceActive(now)
+    )
+
+    local meaningful = false
+    local _, evaluation
+    for _, evaluation in ipairs(evaluations or {}) do
+        if evaluation.state == "active" or evaluation.state == "expiring" or evaluation.state == "partial" then
+            meaningful = true
+            break
+        end
+    end
+    if not meaningful then
+        return false
+    end
+
+    self.encounter.lastMeaningfulLive = {
+        capturedAt = now,
+        bossGUID = self.primaryVisibleBoss.guid,
+        bossName = self.primaryVisibleBoss.name,
+        lines = self:BuildEvaluationLines(evaluations),
+    }
+    return true
+end
+
+function PB.Encounter:PrepareForAuraRemoval(now)
+    if not self.active or not self.encounter then
+        return
+    end
+
+    local previousRemovalAt = self.encounter.removalBatchLastAt
+    local sameBatch = previousRemovalAt ~= nil and now - previousRemovalAt <= REMOVAL_BATCH_DELAY
+    self.encounter.removalBatchLastAt = now
+    self.encounter.removalBatchToken = (self.encounter.removalBatchToken or 0) + 1
+    local token = self.encounter.removalBatchToken
+    local generation = self.generation
+    if not sameBatch then
+        self:RecordMeaningfulLiveState(now)
+    end
+
+    C_Timer.After(REMOVAL_BATCH_DELAY, function()
+        if self.active
+            and self.generation == generation
+            and self.encounter
+            and self.encounter.removalBatchToken == token
+        then
+            self.encounter.removalBatchLastAt = nil
+            self:RecordMeaningfulLiveState()
+        end
+    end)
+end
+
+function PB.Encounter:CancelPendingRemovalCapture()
+    if self.encounter then
+        self.encounter.removalBatchToken = (self.encounter.removalBatchToken or 0) + 1
+        self.encounter.removalBatchLastAt = nil
+    end
 end
 
 function PB.Encounter:RefreshVisibleBosses(unitProvider)
@@ -198,6 +307,7 @@ function PB.Encounter:RefreshVisibleBosses(unitProvider)
     elseif not (self.primaryVisibleBoss and self.primaryVisibleBoss.discoveredFromCombatLog) then
         self.primaryVisibleBoss = nil
     end
+    self:RecordMeaningfulLiveState()
     self:RefreshDisplay()
 end
 
@@ -359,112 +469,23 @@ function PB.Encounter:RefreshDisplay()
     local evaluations
     if boss then
         local now = GetTime()
-        PB.State:ExpireBoss(boss.guid, now)
+        local expired = PB.State:ExpireBoss(boss.guid, now)
         evaluations = PB.State:EvaluateBoss(
             boss.guid,
             now,
             ParseBuddyDB.warningThreshold,
             self:IsGraceActive(now)
         )
+        if expired then
+            self:RecordMeaningfulLiveState(now, evaluations)
+        end
     end
     PB.UI:UpdateEncounter(self.encounter, boss, evaluations)
 end
 
-function PB.Encounter:BuildDumpLines()
+function PB.Encounter:BuildCandidateLines(heading)
     local lines = {}
-    appendLine(lines, "ParseBuddy dump:")
-
-    local uiMode = PB.UI and PB.UI.mode or "none"
-    local frameShown = PB.UI and PB.UI.frame and PB.UI.frame:IsShown() or false
-
-    if not self.active then
-        appendLine(lines, string.format("Encounter: active=no uiMode=%s frameShown=%s", tostring(uiMode), formatBool(frameShown)))
-        return lines
-    end
-
-    appendLine(lines, string.format(
-        "Encounter: active=yes id=%s name=%s difficulty=%s groupSize=%s startedAt=%.1f",
-        formatMaybe(self.encounter and self.encounter.id),
-        formatMaybe(self.encounter and self.encounter.name),
-        formatMaybe(self.encounter and self.encounter.difficultyId),
-        formatMaybe(self.encounter and self.encounter.groupSize),
-        tonumber(self.encounter and self.encounter.startedAt) or 0
-    ))
-    local metrics = self.encounter.metrics or {}
-    local scansByReason = metrics.scansByReason or {}
-    appendLine(lines, string.format(
-        "Metrics: cleu=%d refreshes=%d ticker=%d scans=%d [appear=%d cleu=%d debug=%d] inspected=%d trackedSeen=%d",
-        metrics.relevantCLEU or 0,
-        metrics.displayRefreshes or 0,
-        metrics.tickerTicks or 0,
-        metrics.scans or 0,
-        scansByReason["boss-unit-appeared"] or 0,
-        scansByReason.cleu or 0,
-        scansByReason.debugscan or 0,
-        metrics.inspectedAuras or 0,
-        metrics.trackedAurasSeen or 0
-    ))
-    local primaryBoss = self.primaryVisibleBoss
-    appendLine(lines, string.format(
-        "UI: mode=%s frameShown=%s primaryBoss=%s visible=%s fallback=%s encounterMatch=%s",
-        tostring(uiMode),
-        formatBool(frameShown),
-        formatMaybe(primaryBoss and primaryBoss.name),
-        formatBool(primaryBoss and primaryBoss.visible),
-        formatBool(primaryBoss and primaryBoss.discoveredFromCombatLog),
-        formatBool(primaryBoss and primaryBoss.matchesEncounterName)
-    ))
-
-    appendLine(lines, "Visible boss units:")
-    local index
-    for index = 1, BOSS_UNIT_COUNT do
-        local unitToken = "boss" .. index
-        local boss = nil
-        local visibleBoss = nil
-        for _, candidate in ipairs(self.visibleOrder) do
-            if candidate.unitToken == unitToken then
-                visibleBoss = candidate
-                break
-            end
-        end
-        if visibleBoss then
-            boss = visibleBoss
-            appendLine(lines, string.format("  %s: guid=%s name=%s", unitToken, formatMaybe(boss.guid), formatMaybe(boss.name)))
-        else
-            appendLine(lines, string.format("  %s: none", unitToken))
-        end
-    end
-
-    appendLine(lines, "Encountered bosses:")
-    if next(self.encounteredBosses) == nil then
-        appendLine(lines, "  none")
-    else
-        local encountered = {}
-        local guid, boss
-        for guid, boss in pairs(self.encounteredBosses) do
-            encountered[#encountered + 1] = boss
-        end
-        table.sort(encountered, function(left, right)
-            return tostring(left.guid) < tostring(right.guid)
-        end)
-        local _, item
-        for _, item in ipairs(encountered) do
-            appendLine(lines, string.format(
-                "  guid=%s name=%s visible=%s unit=%s lastUnit=%s firstSeenIndex=%s lastScanAt=%s scanReason=%s scanTracked=%s",
-                formatMaybe(item.guid),
-                formatMaybe(item.name),
-                formatBool(item.visible),
-                formatMaybe(item.unitToken),
-                formatMaybe(item.lastUnitToken),
-                formatMaybe(item.firstSeenIndex),
-                formatMaybe(item.lastScanAt),
-                formatMaybe(item.lastScanReason),
-                formatMaybe(item.lastScanTrackedCount)
-            ))
-        end
-    end
-
-    appendLine(lines, "Tracked candidates:")
+    appendLine(lines, heading or "Tracked candidates:")
     local candidatesByBoss = PB.State and PB.State.candidatesByBoss or {}
     if next(candidatesByBoss) == nil then
         appendLine(lines, "  none")
@@ -522,7 +543,98 @@ function PB.Encounter:BuildDumpLines()
         end
     end
 
-    appendLine(lines, "Visible evaluations:")
+    return lines
+end
+
+function PB.Encounter:BuildDumpLines(options)
+    options = options or {}
+    local lines = {}
+    appendLine(lines, "ParseBuddy dump:")
+    appendLine(lines, "Dump source: " .. (options.source or "LIVE"))
+
+    local uiMode = PB.UI and PB.UI.mode or "none"
+    local frameShown = PB.UI and PB.UI.frame and PB.UI.frame:IsShown() or false
+    local reportActive = options.reportActive
+    if reportActive == nil then
+        reportActive = self.active
+    end
+
+    if not self.encounter then
+        appendLine(lines, string.format("Encounter: active=no uiMode=%s frameShown=%s", tostring(uiMode), formatBool(frameShown)))
+        return lines
+    end
+
+    appendLine(lines, string.format(
+        "Encounter: active=%s id=%s name=%s difficulty=%s groupSize=%s startedAt=%.1f",
+        formatBool(reportActive),
+        formatMaybe(self.encounter.id),
+        formatMaybe(self.encounter.name),
+        formatMaybe(self.encounter.difficultyId),
+        formatMaybe(self.encounter.groupSize),
+        tonumber(self.encounter.startedAt) or 0
+    ))
+    local metrics = self.encounter.metrics or {}
+    local scansByReason = metrics.scansByReason or {}
+    appendLine(lines, string.format(
+        "Metrics: cleu=%d refreshes=%d ticker=%d scans=%d [appear=%d cleu=%d debug=%d] inspected=%d trackedSeen=%d",
+        metrics.relevantCLEU or 0, metrics.displayRefreshes or 0, metrics.tickerTicks or 0, metrics.scans or 0,
+        scansByReason["boss-unit-appeared"] or 0, scansByReason.cleu or 0, scansByReason.debugscan or 0,
+        metrics.inspectedAuras or 0, metrics.trackedAurasSeen or 0
+    ))
+    local primaryBoss = self.primaryVisibleBoss
+    appendLine(lines, string.format(
+        "UI: mode=%s frameShown=%s primaryBoss=%s visible=%s fallback=%s encounterMatch=%s",
+        tostring(uiMode), formatBool(frameShown), formatMaybe(primaryBoss and primaryBoss.name),
+        formatBool(primaryBoss and primaryBoss.visible), formatBool(primaryBoss and primaryBoss.discoveredFromCombatLog),
+        formatBool(primaryBoss and primaryBoss.matchesEncounterName)
+    ))
+
+    appendLine(lines, "Visible boss units:")
+    local index
+    for index = 1, BOSS_UNIT_COUNT do
+        local unitToken = "boss" .. index
+        local visibleBoss
+        local _, candidate
+        for _, candidate in ipairs(self.visibleOrder) do
+            if candidate.unitToken == unitToken then
+                visibleBoss = candidate
+                break
+            end
+        end
+        if visibleBoss then
+            appendLine(lines, string.format("  %s: guid=%s name=%s", unitToken, formatMaybe(visibleBoss.guid), formatMaybe(visibleBoss.name)))
+        else
+            appendLine(lines, string.format("  %s: none", unitToken))
+        end
+    end
+
+    appendLine(lines, "Encountered bosses:")
+    if next(self.encounteredBosses) == nil then
+        appendLine(lines, "  none")
+    else
+        local encountered = {}
+        local _, boss
+        for _, boss in pairs(self.encounteredBosses) do
+            encountered[#encountered + 1] = boss
+        end
+        table.sort(encountered, function(left, right) return tostring(left.guid) < tostring(right.guid) end)
+        local _, item
+        for _, item in ipairs(encountered) do
+            appendLine(lines, string.format(
+                "  guid=%s name=%s visible=%s unit=%s lastUnit=%s firstSeenIndex=%s lastScanAt=%s scanReason=%s scanTracked=%s",
+                formatMaybe(item.guid), formatMaybe(item.name), formatBool(item.visible), formatMaybe(item.unitToken),
+                formatMaybe(item.lastUnitToken), formatMaybe(item.firstSeenIndex), formatMaybe(item.lastScanAt),
+                formatMaybe(item.lastScanReason), formatMaybe(item.lastScanTrackedCount)
+            ))
+        end
+    end
+
+    local candidateLines = self:BuildCandidateLines(options.candidateHeading)
+    for index = 1, #candidateLines do
+        appendLine(lines, candidateLines[index])
+    end
+
+    appendLine(lines, options.evaluationHeading or "Visible evaluations:")
     if not self.primaryVisibleBoss then
         appendLine(lines, "  none - no boss target is currently selected")
     else
@@ -533,16 +645,9 @@ function PB.Encounter:BuildDumpLines()
             ParseBuddyDB.warningThreshold,
             self:IsGraceActive(now)
         )
-        local evaluation
-        for _, evaluation in ipairs(evaluations or {}) do
-            local row = PB.UI:EvaluationToRowData(evaluation)
-            appendLine(lines, string.format(
-                "  %s: %s - %s - %s",
-                formatMaybe(row.group),
-                formatMaybe(row.effect),
-                formatMaybe(row.source),
-                formatMaybe(row.status)
-            ))
+        local evaluationLines = self:BuildEvaluationLines(evaluations)
+        for index = 1, #evaluationLines do
+            appendLine(lines, evaluationLines[index])
         end
     end
 

@@ -27,6 +27,7 @@ Tagline: "Your wingman for cleaner raid parses."
 - Do not claim talent improvements such as Improved Faerie Fire, Improved Thunder Clap, Improved Demoralizing Shout, or Malediction without reliable evidence. The MVP tracks actual boss auras only.
 - CLEU will be the primary source for aura lifecycle and source-player information.
 - Aura scans will supplement CLEU only for duration, expiration, stack confirmation, and late-load recovery.
+- Completed diagnostic snapshots preserve final raw candidates separately from one bounded last-meaningful live evaluation view. Terminal aura-removal cleanup must not overwrite that retained live view.
 - Combat-log fallback discovery may learn non-friendly NPC destinations, including neutral encounter targets such as Midnight, and never from a full aura-removal event. Continue rejecting players, pets, guardians, and friendly NPCs.
 - A boss previously exposed through `boss1`-`boss5`, or matching the encounter name, takes precedence over newly discovered fallback adds. Relevant activity from a known hidden boss may reclaim the single-boss display.
 

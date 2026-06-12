@@ -50,9 +50,16 @@ function PB.Events:HandleCombatLogEvent()
         end
     end
 
+    local observedAt = GetTime and GetTime() or timestamp
+    if subevent == "SPELL_AURA_REMOVED" then
+        PB.Encounter:PrepareForAuraRemoval(observedAt)
+    else
+        PB.Encounter:CancelPendingRemovalCapture()
+    end
+
     local changed = PB.State:HandleAuraEvent({
         timestamp = timestamp,
-        observedAt = GetTime and GetTime() or timestamp,
+        observedAt = observedAt,
         subevent = subevent,
         sourceGUID = sourceGUID,
         sourceName = sourceName,
@@ -66,6 +73,9 @@ function PB.Events:HandleCombatLogEvent()
     local ignoredSpellId = subevent == "SPELL_AURA_REMOVED" and spellId or nil
     local scanned = PB.Encounter:ResyncBossGUID(destGUID, "cleu", nil, ignoredSpellId)
     if (changed or scanned) and PB.Encounter:ShouldRefreshForGUID(destGUID) then
+        if subevent ~= "SPELL_AURA_REMOVED" then
+            PB.Encounter:RecordMeaningfulLiveState(observedAt)
+        end
         PB.Encounter:RefreshDisplay()
     end
 end

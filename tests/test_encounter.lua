@@ -126,6 +126,7 @@ assertEqual(ParseBuddy.tickerCancelled, true, "display ticker cancelled at encou
 assertEqual(snapshot.encounterName, "Test Encounter", "encounter end captures snapshot")
 assertEqual(snapshot.success, true, "snapshot records encounter success")
 assertEqual(snapshot.capturedAt, 123456, "snapshot records wall-clock capture time")
+assertEqual(snapshot.schemaVersion, 2, "snapshot schema includes live and raw diagnostics")
 assertEqual(ParseBuddy.lastEncounterSnapshot, snapshot, "snapshot retained in memory")
 assertEqual(ParseBuddyDB.lastEncounterSnapshot, snapshot, "snapshot retained in saved variables")
 

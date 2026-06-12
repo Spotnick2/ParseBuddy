@@ -15,7 +15,7 @@ end
 function PB:Dump()
     local lines
     if self.Encounter and self.Encounter.active and self.Encounter.BuildDumpLines then
-        lines = self.Encounter:BuildDumpLines()
+        lines = self.Encounter:BuildDumpLines({ source = "LIVE" })
     elseif self.lastEncounterSnapshot and self.lastEncounterSnapshot.lines then
         lines = self.lastEncounterSnapshot.lines
     else

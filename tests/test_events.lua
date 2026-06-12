@@ -34,6 +34,15 @@ ParseBuddy = {
         RecordRelevantCLEU = function(self)
             self.relevant = (self.relevant or 0) + 1
         end,
+        RecordMeaningfulLiveState = function(self)
+            self.meaningfulCaptures = (self.meaningfulCaptures or 0) + 1
+        end,
+        PrepareForAuraRemoval = function(self)
+            self.removalPreparations = (self.removalPreparations or 0) + 1
+        end,
+        CancelPendingRemovalCapture = function(self)
+            self.removalCancellations = (self.removalCancellations or 0) + 1
+        end,
         ShouldRefreshForGUID = function(self, guid)
             return self.visibleMode and guid == "Boss-GUID" or self.learned[guid] ~= nil
         end,
@@ -105,6 +114,7 @@ assertEqual(ParseBuddy.State.events[1].amount, 5, "dose amount dispatched")
 assertEqual(ParseBuddy.Encounter.refreshed, 1, "visible boss refreshes display")
 assertEqual(ParseBuddy.Encounter.lastScanReason, "cleu", "relevant CLEU event triggers opportunistic scan")
 assertEqual(ParseBuddy.Encounter.relevant, 1, "tracked boss event increments diagnostics")
+assertEqual(ParseBuddy.Encounter.meaningfulCaptures, 1, "tracked state change records live diagnostics")
 
 ParseBuddy.Encounter.visibleMode = false
 currentEvent = { 100, "SPELL_AURA_REMOVED", false, "Player", "Tank", 0, 0, "Removed-GUID", "Removed Target", HOSTILE_NPC_FLAGS, 0, 25225, "Sunder Armor", 1, "DEBUFF" }
@@ -139,5 +149,6 @@ assertEqual(ParseBuddy.Encounter.reclaimed["Fallback-GUID"], 1, "known hidden bo
 currentEvent = { 102, "SPELL_AURA_REMOVED", false, "Player", "Tank", 0, 0, "Fallback-GUID", "Fallback Boss", HOSTILE_NPC_FLAGS, 0, 25225, "Sunder Armor", 1, "DEBUFF" }
 Events:HandleCombatLogEvent()
 assertEqual(ParseBuddy.Encounter.lastIgnoredSpellId, 25225, "full removal excludes stale same-frame aura from resync")
+assertEqual(ParseBuddy.Encounter.removalPreparations, 1, "full removal preserves pre-removal diagnostics")
 
 print("ParseBuddy Events tests passed: " .. testsRun)
