@@ -26,6 +26,11 @@ ParseBuddy = {
         SetOpacity = function(self, value) self.opacity = value end,
         SetDisplayMode = function(self, value) self.displayMode = value end,
     },
+    Config = {
+        SetScope = function(self, value) self.scope = value end,
+        HandleGroupCommand = function(self, value) self.groupCommand = value end,
+        PrintGroups = function(self) self.groupsPrinted = (self.groupsPrinted or 0) + 1 end,
+    },
 }
 
 CreateFrame = function()
@@ -69,6 +74,16 @@ ParseBuddy:HandleSlashCommand("mode full")
 assertEqual(ParseBuddy.UI.displayMode, "full", "full mode slash command dispatches value")
 ParseBuddy:HandleSlashCommand("help")
 assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "mode", 1, true) ~= nil, true, "help lists display mode")
+
+ParseBuddy:HandleSlashCommand("profile personal")
+assertEqual(ParseBuddy.Config.scope, "personal", "profile slash command dispatches scope")
+ParseBuddy:HandleSlashCommand("group majorArmor optional")
+assertEqual(ParseBuddy.Config.groupCommand, "majorarmor optional", "group slash command dispatches normalized argument")
+ParseBuddy:HandleSlashCommand("groups")
+assertEqual(ParseBuddy.Config.groupsPrinted, 1, "groups slash command lists settings")
+ParseBuddy:HandleSlashCommand("help")
+assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "profile", 1, true) ~= nil, true, "help lists profile scope")
+assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "group", 1, true) ~= nil, true, "help lists group commands")
 
 ParseBuddy:HandleSlashCommand("snapshot")
 assertEqual(ParseBuddy.snapshots, 1, "snapshot slash command prints saved snapshot")

@@ -21,6 +21,19 @@ PB.Defaults = {
     },
 }
 
+PB.Defaults.settings = {
+    displayMode = "PROBLEMS_ONLY",
+    groups = {
+        spellVulnerability = { enabled = true, required = true },
+        majorArmor = { enabled = true, required = true },
+        faerieFire = { enabled = true, required = true },
+        judgement = { enabled = true, required = true },
+        attackPower = { enabled = true, required = true },
+        attackSpeed = { enabled = true, required = true },
+        recklessness = { enabled = true, required = false },
+    },
+}
+
 local function applyDefaults(target, defaults)
     for key, value in pairs(defaults) do
         if type(value) == "table" then
@@ -36,4 +49,25 @@ end
 
 function PB.Defaults:Apply(database)
     applyDefaults(database, self.values)
+end
+
+function PB.Defaults:ApplySettings(settings)
+    applyDefaults(settings, self.settings)
+end
+
+function PB.Defaults:CopySettings(settings)
+    local copy = {}
+    local function copyTable(target, source)
+        local key, value
+        for key, value in pairs(source) do
+            if type(value) == "table" then
+                target[key] = {}
+                copyTable(target[key], value)
+            else
+                target[key] = value
+            end
+        end
+    end
+    copyTable(copy, settings)
+    return copy
 end

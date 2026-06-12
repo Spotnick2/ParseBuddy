@@ -34,6 +34,13 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - `/pb mode problems`: use Problems Only during live encounters
 - `/pb mode full`: use Full List during live encounters
 - `/pb mode`: show the current display mode
+- `/pb profile`: show whether this character uses global or personal settings
+- `/pb profile global`: use account-wide display and group settings
+- `/pb profile personal`: use this character's settings; the first selection copies current global settings
+- `/pb groups`: list every stable group key and its active-scope settings
+- `/pb group <key>`: show one group's active-scope settings
+- `/pb group <key> enable|disable`: change whether a group is evaluated and displayed
+- `/pb group <key> required|optional`: change whether missing/grace is a problem in Problems Only
 - `/pb dump`: print explicitly labeled live diagnostics, or the completed snapshot when no encounter is active
 - `/pb snapshot`: print the automatically captured diagnostic snapshot from the most recently completed encounter
 - `/pb clear`: clear the in-memory and persisted diagnostic snapshot
@@ -69,9 +76,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 
 ## Not Yet Implemented
 
-- Global versus personal profile scope and per-group enable, required, and optional settings
-  - requested slash-command scope selector, tentatively `/pb profile global` and `/pb profile personal`
-  - exact per-character storage and override semantics must be defined before implementation
+- Named profiles beyond the implemented global account scope and personal per-character scope
 - Additional optional debuff groups beyond Curse of Recklessness and boss-specific profiles
 - Multi-boss display sections
 - Sounds, raid warnings, whispers, assignments, and import/export
@@ -101,6 +106,11 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - Full List shows every enabled group, including healthy active rows.
 - `/pb mode problems` and `/pb mode full` switch immediately during an encounter and persist after `/reload`.
 - Filtered rows compact without gaps, unused row slots stay hidden, and the frame height follows the visible row count.
+- Global display/group settings live in `ParseBuddyDB`; personal display/group settings live in `ParseBuddyCharDB`.
+- The first `/pb profile personal` copies the current global settings once. Later scope switching preserves independent edits in both stores.
+- Frame position, scale, opacity, and lock state remain account-wide regardless of active profile scope.
+- All groups default enabled. Curse of Recklessness defaults optional; the six original groups default required.
+- Disabled groups are absent from both display modes. Optional missing/grace rows are hidden in Problems Only, while optional partial, expiring, and unknown-source rows remain visible.
 - Starting a supported encounter shows the primary boss and all seven live group rows. Visible `bossN` units are preferred, but a tracked combat-log boss target can seed the display when no unit is exposed.
 - Missing groups are gray during pull grace and red afterward.
 - Applying, refreshing, stacking, or removing a tracked boss debuff updates its group row immediately.
@@ -122,15 +132,18 @@ Run these checks after `/reload` with Lua errors enabled:
 1. Run `/pb validate`. Record any missing IDs; expected client-specific failures must be investigated before the row is trusted.
 2. Run `/pb test` in both saved display modes. Verify all seven deterministic rows remain visible because test mode deliberately bypasses live filtering.
 3. Verify unlock, drag, lock, scale, `/pb reset`, and persistence across another `/reload`.
-4. On a normal `boss1` encounter, use `/pb mode full` and verify all seven rows, source names, Sunder stacks, warning colors, and countdowns.
-5. Use `/pb mode problems`. Verify healthy green rows disappear; required missing/grace, partial, expiring, and unknown-source rows remain; and the frame compacts without stale rows.
-6. Apply and remove each available tracked debuff. Confirm CLEU changes appear immediately and known timers expire without requiring a removal event.
-7. Run `/pb debugscan` while the boss is visible. Confirm the boss count and tracked-aura count match the frame.
-8. Run `/pb dump`. Confirm the primary GUID, scan reason, candidate expiration source, and visible evaluations match the boss.
-9. Retest Magtheridon: a channeler may seed the provisional display, but Magtheridon must replace it when identified and CoE must remain active in that event tick.
-10. On a phase transition, verify an unrelated add cannot replace a previously visible boss and relevant activity can reclaim the known boss.
-11. End or wipe the encounter. Confirm the ticker stops and the frame hides without stale test or encounter rows.
-12. After combat, run `/pb snapshot` and `/pb dump`. Confirm both show `COMPLETED SNAPSHOT`, `active=no`, final raw candidates, final evaluations, and the retained last meaningful live evaluations. Reload once and confirm the snapshot remains available, then clear it with `/pb clear`.
+4. Run `/pb profile`, `/pb groups`, and `/pb group recklessness`. Verify the default is global and Recklessness is enabled/optional.
+5. Set a distinctive global mode/group combination, switch to personal, and verify it was copied. Change the personal settings, switch back to global, and confirm the global values were preserved. Reload and verify the selected scope and both settings stores persist.
+6. On a normal `boss1` encounter, use `/pb mode full` and verify every enabled row, source names, Sunder stacks, warning colors, and countdowns.
+7. Disable a group and verify it disappears from both modes. Mark another group optional and verify its missing/grace row disappears only in Problems Only while partial, expiring, or unknown-source states remain visible.
+8. Use `/pb mode problems`. Verify healthy green rows disappear; required missing/grace, partial, expiring, and unknown-source rows remain; and the frame compacts without stale rows.
+9. Apply and remove each available tracked debuff. Confirm CLEU changes appear immediately and known timers expire without requiring a removal event.
+10. Run `/pb debugscan` while the boss is visible. Confirm the boss count and tracked-aura count match the frame.
+11. Run `/pb dump`. Confirm the primary GUID, scan reason, candidate expiration source, and visible evaluations match the boss.
+12. Retest Magtheridon: a channeler may seed the provisional display, but Magtheridon must replace it when identified and CoE must remain active in that event tick.
+13. On a phase transition, verify an unrelated add cannot replace a previously visible boss and relevant activity can reclaim the known boss.
+14. End or wipe the encounter. Confirm the ticker stops and the frame hides without stale test or encounter rows.
+15. After combat, run `/pb snapshot` and `/pb dump`. Confirm both show `COMPLETED SNAPSHOT`, `active=no`, final raw candidates, final evaluations, and the retained last meaningful live evaluations. Reload once and confirm the snapshot remains available, then clear it with `/pb clear`.
 
 `/pb dump` metrics are cumulative for the current encounter. `cleu` counts accepted tracked aura events, `refreshes` counts display evaluations, `ticker` counts 0.2-second ticks, and `scans` is split by boss appearance, CLEU, and manual debug scans. A growing ticker count must not increase scan counts by itself.
 

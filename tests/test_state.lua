@@ -218,4 +218,20 @@ assertEqual(exposeCandidate.durationSource, nil, "variable-duration apply clears
 live = State:EvaluateBoss("Boss-B", 102, 5, true)
 assertEqual(live[1].state, "grace", "missing group is neutral during grace")
 
+ParseBuddy.Config = {
+    GetGroupSettings = function(_, groupKey)
+        if groupKey == "majorArmor" then
+            return { enabled = false, required = true }
+        end
+        if groupKey == "recklessness" then
+            return { enabled = true, required = false }
+        end
+        return { enabled = true, required = true }
+    end,
+}
+live = State:EvaluateBoss("Boss-B", 102, 5, false)
+assertEqual(live[2].state, "disabled", "scope settings disable group evaluation")
+assertEqual(live[7].state, "missing", "optional enabled group still evaluates")
+assertEqual(live[7].required, false, "effective optional setting reaches display evaluation")
+
 print("ParseBuddy State tests passed: " .. testsRun)

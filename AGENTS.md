@@ -29,6 +29,8 @@ Tagline: "Your wingman for cleaner raid parses."
 - Aura scans will supplement CLEU only for duration, expiration, stack confirmation, and late-load recovery.
 - Completed diagnostic snapshots preserve final raw candidates separately from one bounded last-meaningful live evaluation view. Terminal aura-removal cleanup must not overwrite that retained live view.
 - Live display filtering is a UI concern. Problems Only hides healthy active rows and shows required missing/grace, partial, expiring, and unknown-source rows; Full List shows every enabled group. Test mode and diagnostics remain unfiltered.
+- Global settings use `ParseBuddyDB.settings`; per-character personal settings use `ParseBuddyCharDB.settings`, selected by `ParseBuddyCharDB.activeScope`. Frame position, scale, opacity, and lock state remain account-wide in `ParseBuddyDB.frame`.
+- Personal settings are copied from current global settings only on first selection. Scope switching must preserve both stores without merging or overwriting later edits.
 - Combat-log fallback discovery may learn non-friendly NPC destinations, including neutral encounter targets such as Midnight, and never from a full aura-removal event. Continue rejecting players, pets, guardians, and friendly NPCs.
 - A boss previously exposed through `boss1`-`boss5`, or matching the encounter name, takes precedence over newly discovered fallback adds. Relevant activity from a known hidden boss may reclaim the single-boss display.
 
@@ -84,7 +86,7 @@ Do not implement more than the requested milestone. The first priorities are add
 - `State.lua`: encounter candidate state, deterministic group evaluation, known-duration expiry, and injectable single-unit aura resync.
 - `Encounter.lua`: encounter lifecycle, boss GUID/unit-token tracking, opportunistic scan triggers, and the display-only ticker.
 - `Events.lua`: event registration and lightweight CLEU dispatch.
-- `Config.lua`: profile/settings access and configuration UI.
+- `Config.lua`: global/personal scope selection, scoped display/group settings, and slash-command settings access. No configuration UI yet.
 
 ## Versioning
 
@@ -99,6 +101,7 @@ Verify the TOC Interface against the installed TBC Anniversary client before rel
 - `/pb validate` checks configured numeric spell IDs through client spell APIs. It is user-triggered debug work and must never run automatically in combat.
 - `/pb opacity 0.2-1.0` changes the persisted alpha of the whole frame; `/pb reset` restores opacity to `1.0` with position and scale.
 - `/pb mode problems|full` changes the persisted live encounter display mode. `/pb test` must remain deterministic and unfiltered.
+- `/pb profile global|personal`, `/pb groups`, and `/pb group <key> ...` manage scoped settings. Stable group keys are part of the command contract.
 - `/pb snapshot` prints the automatically captured diagnostic snapshot from the most recently completed encounter.
 - `/pb clear` clears both `ParseBuddy.lastEncounterSnapshot` and `ParseBuddyDB.lastEncounterSnapshot`.
 
@@ -111,8 +114,6 @@ Verify the TOC Interface against the installed TBC Anniversary client before rel
 - The snapshot is diagnostic evidence, not the deferred uptime summary. Do not add scoring, historical accumulation, or raw CLEU event storage.
 
 ## Deferred Optional Features
-
-- Global versus personal profile scope is deferred. The requested commands are tentatively `/pb profile global` and `/pb profile personal`; do not implement them until per-character persistence and override semantics are explicitly defined.
 
 - A post-encounter uptime summary may be implemented only when explicitly requested as a separate post-MVP milestone.
 - It must derive uptime from ParseBuddy's in-memory real-time encounter state, not Warcraft Logs, archived combat logs, uploads, scraping, or external calls.

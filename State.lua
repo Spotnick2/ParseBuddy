@@ -126,6 +126,7 @@ function PB.State:EvaluateGroup(group, candidates, options)
         return {
             group = group,
             state = "disabled",
+            required = options.required,
             sourceKnown = false,
         }
     end
@@ -155,6 +156,7 @@ function PB.State:EvaluateGroup(group, candidates, options)
         return {
             group = group,
             state = "missing",
+            required = options.required,
             recentCandidate = best and best.candidate or nil,
             sourceKnown = false,
         }
@@ -163,6 +165,7 @@ function PB.State:EvaluateGroup(group, candidates, options)
     return {
         group = group,
         state = best.kind,
+        required = options.required,
         candidate = best.candidate,
         spell = best.spell,
         remaining = best.remaining,
@@ -410,10 +413,19 @@ function PB.State:EvaluateBoss(bossGUID, now, warningThreshold, graceActive)
     local index
 
     for index, group in ipairs(PB.DebuffLibrary.groups) do
+        local groupSettings = PB.Config and PB.Config:GetGroupSettings(group.key) or {
+            enabled = true,
+            required = group.required,
+        }
         local evaluation = self:EvaluateGroup(
             group,
             candidatesAsArray(bossCandidates[group.key]),
-            { now = now, warningThreshold = warningThreshold }
+            {
+                now = now,
+                warningThreshold = warningThreshold,
+                enabled = groupSettings.enabled,
+                required = groupSettings.required,
+            }
         )
         if graceActive and evaluation.state == "missing" then
             evaluation.state = "grace"

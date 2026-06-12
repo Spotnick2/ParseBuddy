@@ -319,14 +319,14 @@ function PB.UI:IsEvaluationVisible(evaluation, displayMode)
         return true
     end
     if evaluation.state == "missing" or evaluation.state == "grace" then
-        return evaluation.group and evaluation.group.required ~= false
+        return evaluation.required ~= false
     end
     return false
 end
 
 function PB.UI:RenderEvaluations(evaluations, showAll)
     local frame = self:CreateFrame()
-    local displayMode = ParseBuddyDB.displayMode
+    local displayMode = PB.Config and PB.Config:GetDisplayMode() or ParseBuddyDB.displayMode
     local visibleCount = 0
     local index
 
@@ -350,13 +350,13 @@ end
 function PB.UI:SetDisplayMode(value)
     local mode = value and value:lower() or ""
     if mode == "problems" then
-        ParseBuddyDB.displayMode = DISPLAY_MODE_PROBLEMS
+        PB.Config:SetDisplayMode(DISPLAY_MODE_PROBLEMS)
         PB:Print("Display mode set to Problems Only.")
     elseif mode == "full" then
-        ParseBuddyDB.displayMode = DISPLAY_MODE_FULL
+        PB.Config:SetDisplayMode(DISPLAY_MODE_FULL)
         PB:Print("Display mode set to Full List.")
     elseif mode == "" then
-        PB:Print("Display mode: " .. (ParseBuddyDB.displayMode == DISPLAY_MODE_FULL and "Full List" or "Problems Only"))
+        PB:Print("Display mode: " .. (PB.Config:GetDisplayMode() == DISPLAY_MODE_FULL and "Full List" or "Problems Only") .. " (" .. PB.Config:GetScope() .. ").")
         return
     else
         PB:Print("Mode must be 'problems' or 'full'.")
@@ -369,8 +369,9 @@ function PB.UI:SetDisplayMode(value)
 end
 
 function PB.UI:Initialize()
-    if ParseBuddyDB.displayMode ~= DISPLAY_MODE_PROBLEMS and ParseBuddyDB.displayMode ~= DISPLAY_MODE_FULL then
-        ParseBuddyDB.displayMode = DISPLAY_MODE_PROBLEMS
+    local displayMode = PB.Config:GetDisplayMode()
+    if displayMode ~= DISPLAY_MODE_PROBLEMS and displayMode ~= DISPLAY_MODE_FULL then
+        PB.Config:SetDisplayMode(DISPLAY_MODE_PROBLEMS)
     end
     self:CreateFrame()
     self:ApplySavedPosition()

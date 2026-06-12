@@ -10,6 +10,11 @@ ParseBuddy = {
             error("test evaluations should not be created during an encounter")
         end,
     },
+    Config = {
+        GetDisplayMode = function() return ParseBuddyDB.displayMode end,
+        SetDisplayMode = function(_, value) ParseBuddyDB.displayMode = value end,
+        GetScope = function() return "global" end,
+    },
 }
 
 assert(loadfile("UI.lua"))()
@@ -120,6 +125,7 @@ local function evaluation(state, required, sourceKnown, label)
     return {
         state = state,
         sourceKnown = sourceKnown,
+        required = required,
         group = {
             label = label,
             missingText = label,
@@ -139,6 +145,7 @@ assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("missing", true, false,
 assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("missing", false, false, "Optional"), "PROBLEMS_ONLY"), false, "optional missing row hidden in problems mode")
 assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("grace", true, false, "Grace"), "PROBLEMS_ONLY"), true, "required grace row shown in problems mode")
 assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("disabled", true, false, "Disabled"), "FULL_LIST"), false, "disabled row hidden in full mode")
+assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("missing", false, false, "Optional"), "FULL_LIST"), true, "enabled optional missing row shown in full mode")
 assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("active", true, true, "Healthy"), "FULL_LIST"), true, "healthy row shown in full mode")
 
 local rendered = {}

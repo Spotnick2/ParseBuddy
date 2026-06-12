@@ -10,7 +10,7 @@ local function trim(value)
 end
 
 local function showHelp()
-    PB:Print("Commands: /pb help, test, mode [problems|full], dump, snapshot, clear, debugscan, validate, lock, unlock, reset, scale [0.6-1.4], opacity [0.2-1.0], debug")
+    PB:Print("Commands: /pb help, test, mode [problems|full], profile [global|personal], groups, group <key> [enable|disable|required|optional], dump, snapshot, clear, debugscan, validate, lock, unlock, reset, scale [0.6-1.4], opacity [0.2-1.0], debug")
 end
 
 function PB:HandleSlashCommand(message)
@@ -24,6 +24,12 @@ function PB:HandleSlashCommand(message)
         PB.UI:ShowTestMode()
     elseif command == "mode" then
         PB.UI:SetDisplayMode(argument)
+    elseif command == "profile" then
+        PB.Config:SetScope(argument)
+    elseif command == "group" then
+        PB.Config:HandleGroupCommand(argument)
+    elseif command == "groups" then
+        PB.Config:PrintGroups()
     elseif command == "lock" then
         PB.UI:Lock()
     elseif command == "unlock" then
@@ -64,6 +70,7 @@ end
 function PB:Initialize()
     ParseBuddyDB = ParseBuddyDB or {}
     PB.Defaults:Apply(ParseBuddyDB)
+    PB.Config:Initialize()
 
     local getMetadata = C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
     PB.version = getMetadata and getMetadata(PB.addonName, "Version") or "unknown"
