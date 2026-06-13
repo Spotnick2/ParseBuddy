@@ -4,7 +4,7 @@
 ## Title: ParseBuddy
 ## Notes: Your wingman for cleaner raid parses.
 ## Author: TODO
-## Version: 0.1.7.14
+## Version: 0.1.7.15
 ## SavedVariables: ParseBuddyDB
 ## SavedVariablesPerCharacter: ParseBuddyCharDB
 

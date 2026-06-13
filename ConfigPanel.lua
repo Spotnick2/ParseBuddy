@@ -209,6 +209,7 @@ local function addSegment(parent, text, x, y, width, onClick, tooltip)
     button:SetScript("OnMouseUp", function() button:RefreshStyle() end)
     button.RefreshStyle = function(self) applySegmentStyle(self, self.parseBuddySelected) end
     addTooltip(button, tooltip)
+    button:RefreshStyle()
     return button
 end
 

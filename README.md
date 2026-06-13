@@ -8,6 +8,8 @@ The AddOns settings entry currently presents a static UX prototype. Its controls
 
 The polished prototype uses explicit selected segments, visible custom sliders, compact alternating group rows, one Required checkbox per group, colored availability, readable disabled controls, a dark reading surface, a visible scrollbar, and a secondary Diagnostics disclosure row.
 
+All standalone segmented actions initialize with the same neutral styling as unselected choices; they do not depend on a later interaction to become readable.
+
 ## Core Concept
 
 ParseBuddy will provide a compact, real-time display of important boss debuff groups. It will help raiders notice missing, expiring, partial, or active effects during a pull without performing post-fight analytics or relying on external services.

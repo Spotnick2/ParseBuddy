@@ -1,5 +1,5 @@
 ParseBuddy = {
-    version = "0.1.7.14",
+    version = "0.1.7.15",
     messages = {},
     Print = function(self, message) self.messages[#self.messages + 1] = message end,
 }

@@ -132,3 +132,5 @@ The first in-game prototype proved the API and layout architecture, but exposed 
 The polished prototype replaces those patterns with explicit gold/dark segments, custom sliders, one Required checkbox, readable disabled styling, alternating compact rows, colored availability, and a low-emphasis disclosure row.
 
 The second in-game review showed that the game world remained too visible through the settings surface, disabled alert choices lost too much contrast, and the default scroll thumb and diagnostic action buttons still competed with the settings hierarchy. The follow-up uses a darker reading surface, a visible gold scroll thumb, stronger disabled styling, and neutral diagnostic actions.
+
+Standalone segmented actions must apply their neutral style when created. They must not render with an uninitialized white backdrop until first interaction.
