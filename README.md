@@ -6,7 +6,7 @@ ParseBuddy is an MVP World of Warcraft addon for TBC Anniversary. The implementa
 
 The AddOns settings entry currently presents a static UX prototype. Its controls use deterministic in-memory values and intentionally do not change or persist live addon settings yet.
 
-The polished prototype uses explicit selected segments, visible custom sliders, compact alternating group rows, one Required checkbox per group, colored availability, readable disabled controls, and a secondary Diagnostics disclosure row.
+The polished prototype uses explicit selected segments, visible custom sliders, compact alternating group rows, one Required checkbox per group, colored availability, readable disabled controls, a dark reading surface, a visible scrollbar, and a secondary Diagnostics disclosure row.
 
 ## Core Concept
 

@@ -22,9 +22,9 @@ local SEGMENT_STYLE = {
         text = { 0.72, 0.72, 0.76, 1 },
     },
     disabled = {
-        background = { 0.06, 0.06, 0.07, 0.72 },
-        border = { 0.20, 0.20, 0.22, 0.8 },
-        text = { 0.52, 0.52, 0.55, 1 },
+        background = { 0.09, 0.09, 0.11, 0.92 },
+        border = { 0.28, 0.28, 0.31, 0.95 },
+        text = { 0.62, 0.62, 0.65, 1 },
     },
 }
 
@@ -71,12 +71,12 @@ local function setEnabled(control, enabled)
         control:Disable()
     end
     if control.SetAlpha then
-        control:SetAlpha(enabled and 1 or 0.68)
+        control:SetAlpha(enabled and 1 or (control.RefreshStyle and 0.9 or 0.76))
     end
     if control.linkedText then
         local _, textObject
         for _, textObject in ipairs(control.linkedText) do
-            textObject:SetAlpha(enabled and 1 or 0.68)
+            textObject:SetAlpha(enabled and 1 or 0.76)
         end
     end
     control.parseBuddyEnabled = enabled
@@ -319,6 +319,16 @@ function PB.ConfigPanel:Build(panel)
     local model = PB.ConfigPrototype
     local state = model:GetState()
 
+    local surface = panel:CreateTexture(nil, "BACKGROUND")
+    surface:SetAllPoints(panel)
+    surface:SetColorTexture(0.025, 0.025, 0.035, 0.94)
+
+    local headerDivider = panel:CreateTexture(nil, "ARTWORK")
+    headerDivider:SetPoint("TOPLEFT", panel, "TOPLEFT", LEFT, -94)
+    headerDivider:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -38, -94)
+    headerDivider:SetHeight(1)
+    headerDivider:SetColorTexture(0.45, 0.38, 0.20, 0.8)
+
     local title = addText(panel, "ParseBuddy", "GameFontNormalHuge", LEFT, -10)
     local version = addText(panel, "v" .. tostring(PB.version or "prototype"), "GameFontHighlightSmall", 520, -17)
     version:SetTextColor(0.65, 0.65, 0.65)
@@ -330,14 +340,22 @@ function PB.ConfigPanel:Build(panel)
         { label = "Personal", value = "personal", width = 82, tooltip = "Prototype character scope. This does not change the live profile." },
     }, 75, -66, function() return state.scope end, function(value) model:SetScope(value) end)
 
-    local scroll = CreateFrame("ScrollFrame", nil, panel, "UIPanelScrollFrameTemplate")
+    local scroll = CreateFrame("ScrollFrame", "ParseBuddyConfigScrollFrame", panel, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, -96)
     scroll:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -28, 8)
-    local scrollTrack = panel:CreateTexture(nil, "BACKGROUND")
-    scrollTrack:SetPoint("TOPRIGHT", scroll, "TOPRIGHT", 20, -3)
-    scrollTrack:SetPoint("BOTTOMRIGHT", scroll, "BOTTOMRIGHT", 20, 3)
-    scrollTrack:SetWidth(7)
-    scrollTrack:SetColorTexture(0.10, 0.10, 0.12, 0.9)
+    local scrollBar = _G.ParseBuddyConfigScrollFrameScrollBar
+    if scrollBar then
+        local scrollTrack = panel:CreateTexture(nil, "ARTWORK")
+        scrollTrack:SetPoint("TOP", scrollBar, "TOP", 0, -17)
+        scrollTrack:SetPoint("BOTTOM", scrollBar, "BOTTOM", 0, 17)
+        scrollTrack:SetWidth(8)
+        scrollTrack:SetColorTexture(0.08, 0.08, 0.10, 0.95)
+        local thumb = scrollBar:GetThumbTexture()
+        if thumb then
+            thumb:SetColorTexture(0.78, 0.57, 0.12, 1)
+            thumb:SetSize(10, 30)
+        end
+    end
     local content = CreateFrame("Frame", nil, scroll)
     content:SetWidth(CONTENT_WIDTH)
     scroll:SetScrollChild(content)
@@ -436,10 +454,10 @@ function PB.ConfigPanel:Build(panel)
         model:ToggleDiagnostics()
         refreshDiagnostics()
     end)
-    addButton(diagnostics, "Validate Spell IDs", 0, 0, 125, function() model:RecordAction("Validate Spell IDs") end)
-    addButton(diagnostics, "Roster", 133, 0, 80, function() model:RecordAction("Roster") end)
-    addButton(diagnostics, "Debug Scan", 221, 0, 95, function() model:RecordAction("Debug Scan") end)
-    addButton(diagnostics, "Dump", 324, 0, 75, function() model:RecordAction("Dump") end)
+    addSegment(diagnostics, "Validate Spell IDs", 0, 0, 125, function() model:RecordAction("Validate Spell IDs") end)
+    addSegment(diagnostics, "Roster", 133, 0, 80, function() model:RecordAction("Roster") end)
+    addSegment(diagnostics, "Debug Scan", 221, 0, 95, function() model:RecordAction("Debug Scan") end)
+    addSegment(diagnostics, "Dump", 324, 0, 75, function() model:RecordAction("Dump") end)
     addCheckbox(diagnostics, "Debug output", 0, -31, function() return state.debug end, function(value) model:SetValue("debug", value) end)
     panel.alertControls = alertControls
     panel.diagnostics = diagnostics
