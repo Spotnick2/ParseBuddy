@@ -1,5 +1,5 @@
 ParseBuddy = {
-    version = "0.1.7.12",
+    version = "0.1.7.13",
     messages = {},
     Print = function(self, message) self.messages[#self.messages + 1] = message end,
 }
@@ -25,6 +25,18 @@ assertEqual(state.displayMode, "PROBLEMS_ONLY", "prototype display mode determin
 assertEqual(state.alerts.enabled, false, "prototype alerts default off")
 assertEqual(state.diagnosticsExpanded, false, "diagnostics default collapsed")
 assertEqual(state.groups.judgement.availability, "Not Available", "fake availability deterministic")
+local selectedStyle = ParseBuddy.ConfigPanel:GetSegmentStyle(true, true)
+local unselectedStyle = ParseBuddy.ConfigPanel:GetSegmentStyle(false, true)
+local disabledStyle = ParseBuddy.ConfigPanel:GetSegmentStyle(true, false)
+assertEqual(selectedStyle ~= unselectedStyle, true, "selected segment has distinct style metadata")
+assertEqual(selectedStyle.border[1] > unselectedStyle.border[1], true, "selected segment border is visually stronger")
+assertEqual(disabledStyle.text[1] < selectedStyle.text[1], true, "disabled segment remains distinct and subdued")
+local availableStyle = ParseBuddy.ConfigPanel:GetAvailabilityStyle("Available")
+local unavailableStyle = ParseBuddy.ConfigPanel:GetAvailabilityStyle("Not Available")
+local unknownStyle = ParseBuddy.ConfigPanel:GetAvailabilityStyle("Unknown")
+assertEqual(availableStyle[2] > availableStyle[1], true, "available presentation is green")
+assertEqual(unavailableStyle[1], unavailableStyle[2], "not available presentation is neutral gray")
+assertEqual(unknownStyle[1] > unknownStyle[2], true, "unknown presentation is yellow")
 
 assertEqual(Prototype:SetScope("personal"), true, "prototype scope interaction accepted")
 assertEqual(Prototype:SetDisplayMode("FULL_LIST"), true, "prototype display interaction accepted")
@@ -37,9 +49,20 @@ assertEqual(state.scope, "personal", "prototype scope updates local state")
 assertEqual(state.displayMode, "FULL_LIST", "prototype mode updates local state")
 assertEqual(state.showUnavailable, true, "prototype checkbox updates local state")
 assertEqual(state.groups.majorArmor.required, false, "prototype group interaction updates local state")
+Prototype:SetGroupValue("majorArmor", "required", true)
+assertEqual(state.groups.majorArmor.required, true, "compact required checkbox checked means required")
+Prototype:SetGroupValue("majorArmor", "required", false)
+assertEqual(state.groups.majorArmor.required, false, "compact required checkbox unchecked means optional")
 assertEqual(Prototype:AreAlertControlsEnabled(), true, "alert subordinate controls enabled with master")
 assertEqual(state.alerts.channel, "leader", "prototype alert channel updates")
 assertEqual(state.alerts.delay, 8, "prototype alert delay updates")
+assertEqual(Prototype:ClampSliderValue(2, 0.6, 1.4, 0.05), 1.4, "slider values clamp to maximum")
+assertEqual(Prototype:ClampSliderValue(0, 0.6, 1.4, 0.05), 0.6, "slider values clamp to minimum")
+assertEqual(Prototype:ClampSliderValue(0.83, 0.6, 1.4, 0.05), 0.85, "slider values snap to configured step")
+Prototype:SetSliderValue("scale", 1.8, 0.6, 1.4, 0.05)
+assertEqual(state.scale, 1.4, "prototype scale stores clamped slider value")
+Prototype:SetAlertDelay(90)
+assertEqual(state.alerts.delay, 60, "prototype alert delay clamps to supported range")
 Prototype:SetAlertsEnabled(false)
 assertEqual(Prototype:AreAlertControlsEnabled(), false, "alert subordinate controls disable with master")
 assertEqual(Prototype:ToggleDiagnostics(), true, "diagnostics expand interaction")

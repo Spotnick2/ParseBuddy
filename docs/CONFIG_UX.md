@@ -95,8 +95,11 @@ Summary
 
 - All values live only in `ParseBuddy.ConfigPrototype.state` and reset on `/reload`.
 - No prototype callback may read or write `ParseBuddyDB` or `ParseBuddyCharDB`.
-- Global/Personal is a visible two-button choice and does not switch the real settings scope.
-- Problems Only/Full List, Required/Optional, and Party/Raid/Leader use visible choices rather than dropdowns.
+- Global/Personal is a compact segmented choice with an explicit gold selected state and does not switch the real settings scope.
+- Problems Only/Full List and Party/Raid/Leader use the same selected/unselected segmented styling rather than dropdowns.
+- Each group uses one compact `Required` checkbox; unchecked means Optional.
+- Scale, opacity, and alert delay use custom dependency-free tracks with visible fill, thumb, and numeric value.
+- Group rows use alternating subtle backgrounds and availability text is green, gray, or yellow.
 - Alert destination, delay, and test controls are disabled when prototype alerts are off.
 - Diagnostics are collapsed by default and visually secondary.
 - Prototype action buttons record a local action and print a clearly marked prototype message. They do not invoke live addon behavior.
@@ -115,3 +118,15 @@ Summary
 - Diagnostics start collapsed and can be expanded without rebuilding the panel.
 - No interaction mutates either SavedVariables table.
 - Existing explicit slash commands and live encounter behavior remain unchanged.
+
+## Screenshot Review And Polish
+
+The first in-game prototype proved the API and layout architecture, but exposed several visual problems:
+
+- Blizzard red button templates made both selected and unselected choices look active.
+- `OptionsSliderTemplate` rendered a thumb without a readable track in this client.
+- Paired Required/Optional buttons overwhelmed the group table.
+- Disabled Alerts controls were too dim to read.
+- The large red Diagnostics button looked like a primary or destructive action.
+
+The polished prototype replaces those patterns with explicit gold/dark segments, custom sliders, one Required checkbox, 68% disabled opacity, alternating compact rows, colored availability, and a low-emphasis disclosure row.

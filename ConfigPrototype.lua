@@ -71,6 +71,24 @@ function PB.ConfigPrototype:SetValue(key, value)
     return true
 end
 
+function PB.ConfigPrototype:ClampSliderValue(value, minimum, maximum, step)
+    value = tonumber(value) or minimum
+    value = math.max(minimum, math.min(maximum, value))
+    if step and step > 0 then
+        value = math.floor((value - minimum) / step + 0.5) * step + minimum
+        value = math.max(minimum, math.min(maximum, value))
+    end
+    return value
+end
+
+function PB.ConfigPrototype:SetSliderValue(key, value, minimum, maximum, step)
+    if self:GetState()[key] == nil then
+        return false
+    end
+    self.state[key] = self:ClampSliderValue(value, minimum, maximum, step)
+    return true
+end
+
 function PB.ConfigPrototype:SetGroupValue(groupKey, key, value)
     local group = self:GetState().groups[groupKey]
     if not group or (key ~= "enabled" and key ~= "required") then
@@ -97,11 +115,7 @@ function PB.ConfigPrototype:SetAlertChannel(channel)
 end
 
 function PB.ConfigPrototype:SetAlertDelay(delay)
-    delay = tonumber(delay)
-    if not delay or delay < 0 or delay > 60 then
-        return false
-    end
-    self:GetState().alerts.delay = delay
+    self:GetState().alerts.delay = self:ClampSliderValue(delay, 0, 60, 1)
     return true
 end
 

@@ -6,6 +6,8 @@ ParseBuddy is an MVP World of Warcraft addon for TBC Anniversary. The implementa
 
 The AddOns settings entry currently presents a static UX prototype. Its controls use deterministic in-memory values and intentionally do not change or persist live addon settings yet.
 
+The polished prototype uses explicit selected segments, visible custom sliders, compact alternating group rows, one Required checkbox per group, colored availability, readable disabled controls, and a secondary Diagnostics disclosure row.
+
 ## Core Concept
 
 ParseBuddy will provide a compact, real-time display of important boss debuff groups. It will help raiders notice missing, expiring, partial, or active effects during a pull without performing post-fight analytics or relying on external services.
@@ -112,6 +114,8 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - The configuration page clearly says `PROTOTYPE`, keeps version/scope visible above one scroll area, and has no custom tabs or Save/Apply button.
 - Prototype controls update deterministic local values only. They reset after `/reload` and do not modify `ParseBuddyDB`, `ParseBuddyCharDB`, the encounter frame, or live combat behavior.
 - Alert destination/delay/test controls visibly disable while prototype alerts are off, and Diagnostics starts collapsed.
+- Selected scope/mode/destination choices are visually distinct from unselected choices. Scale, opacity, and delay sliders show a track, fill, thumb, and numeric value.
+- Group rows are compact and aligned; Required checked means required, unchecked means optional. Availability is green, gray, or yellow for Available, Not Available, or Unknown.
 - `/pb test` shows seven deterministic green, yellow, red, and gray preview rows.
 - The frame can be dragged while unlocked.
 - The title-bar lock icon changes between locked and unlocked images and toggles dragging; `/pb lock` and `/pb unlock` provide the same behavior.
