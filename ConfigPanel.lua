@@ -263,6 +263,7 @@ local function addChoice(parent, choices, x, y, selected, onSelect)
         offset = offset + width + 4
     end
     refresh()
+    for _, button in ipairs(buttons) do button.RefreshSelection = refresh end
     return buttons, refresh
 end
 
@@ -274,6 +275,7 @@ local function addCheckbox(parent, text, x, y, checked, onClick)
     checkbox:SetScript("OnClick", function(self)
         onClick(self:GetChecked() == true or self:GetChecked() == 1)
     end)
+    checkbox.RefreshValue = function(self) self:SetChecked(checked()) end
     return checkbox
 end
 
@@ -300,14 +302,24 @@ local function addSlider(parent, label, x, y, width, minimum, maximum, step, get
     thumb:SetColorTexture(0.95, 0.78, 0.28, 1)
     slider:SetThumbTexture(thumb)
     local valueText = addText(parent, format(getValue()), "GameFontNormal", x + width + 82, y - 2)
-    slider:SetScript("OnValueChanged", function(_, value)
-        value = PB.ConfigPrototype:ClampSliderValue(value, minimum, maximum, step)
-        setValue(value)
+    local function updateVisual(value)
         valueText:SetText(format(value))
         local ratio = maximum > minimum and (value - minimum) / (maximum - minimum) or 0
         fill:SetWidth(math.max(1, width * ratio))
+    end
+    slider:SetScript("OnValueChanged", function(_, value)
+        value = PB.ConfigPanelModel:ClampSliderValue(value, minimum, maximum, step)
+        updateVisual(value)
+        if not slider.refreshing then setValue(value) end
     end)
-    slider:SetValue(getValue())
+    slider.RefreshValue = function(self)
+        local value = PB.ConfigPanelModel:ClampSliderValue(getValue(), minimum, maximum, step)
+        self.refreshing = true
+        self:SetValue(value)
+        self.refreshing = false
+        updateVisual(value)
+    end
+    slider:RefreshValue()
     slider.fill = fill
     slider.valueText = valueText
     slider.linkedText = { labelText, valueText }
@@ -317,8 +329,13 @@ end
 function PB.ConfigPanel:Build(panel)
     if panel.built then return end
     panel.built = true
-    local model = PB.ConfigPrototype
-    local state = model:GetState()
+    local model = PB.ConfigPanelModel
+    local state = model:Refresh()
+    panel.refreshers = {}
+    local function registerRefresh(callback)
+        panel.refreshers[#panel.refreshers + 1] = callback
+        return callback
+    end
 
     local surface = panel:CreateTexture(nil, "BACKGROUND")
     surface:SetAllPoints(panel)
@@ -333,13 +350,14 @@ function PB.ConfigPanel:Build(panel)
     local title = addText(panel, "ParseBuddy", "GameFontNormalHuge", LEFT, -10)
     local version = addText(panel, "v" .. tostring(PB.version or "prototype"), "GameFontHighlightSmall", 520, -17)
     version:SetTextColor(0.65, 0.65, 0.65)
-    local notice = addText(panel, "CONFIGURATION PROTOTYPE - changes are not saved", "GameFontNormal", LEFT, -36)
-    notice:SetTextColor(1, 0.65, 0.15)
+    local notice = addText(panel, "Changes apply immediately", "GameFontNormal", LEFT, -36)
+    notice:SetTextColor(0.50, 0.90, 0.55)
     addText(panel, "Scope", "GameFontHighlight", LEFT, -61)
-    addChoice(panel, {
-        { label = "Global", value = "global", width = 82, tooltip = "Prototype account-wide scope. This does not change the live profile." },
-        { label = "Personal", value = "personal", width = 82, tooltip = "Prototype character scope. This does not change the live profile." },
+    local _, refreshScope = addChoice(panel, {
+        { label = "Global", value = "global", width = 82, tooltip = "Use account-wide display, group, and alert settings." },
+        { label = "Personal", value = "personal", width = 82, tooltip = "Use settings for this character. First use copies the current global settings." },
     }, 75, -66, function() return state.scope end, function(value) model:SetScope(value) end)
+    registerRefresh(refreshScope)
 
     local scroll = CreateFrame("ScrollFrame", "ParseBuddyConfigScrollFrame", panel, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, -96)
@@ -365,19 +383,24 @@ function PB.ConfigPanel:Build(panel)
     local y = -8
     _, y = addSection(content, y, "Display")
     addText(content, "Mode", "GameFontHighlight", LEFT, y - 4)
-    addChoice(content, {
+    local _, refreshMode = addChoice(content, {
         { label = "Problems Only", value = "PROBLEMS_ONLY", width = 116 },
         { label = "Full List", value = "FULL_LIST", width = 92 },
     }, 80, y - 9, function() return state.displayMode end, function(value) model:SetDisplayMode(value) end)
+    registerRefresh(refreshMode)
     y = y - 36
-    addCheckbox(content, "Show unavailable", LEFT, y, function() return state.showUnavailable end, function(value) model:SetValue("showUnavailable", value) end)
-    addCheckbox(content, "Lock frame", 230, y, function() return state.locked end, function(value) model:SetValue("locked", value) end)
+    local showUnavailable = addCheckbox(content, "Show unavailable", LEFT, y, function() return state.showUnavailable end, function(value) model:SetShowUnavailable(value) end)
+    local lockFrame = addCheckbox(content, "Lock frame", 230, y, function() return state.locked end, function(value) model:SetFrameLocked(value) end)
+    registerRefresh(function() showUnavailable:RefreshValue() end)
+    registerRefresh(function() lockFrame:RefreshValue() end)
     y = y - 34
-    addSlider(content, "Scale", LEFT, y, 150, 0.6, 1.4, 0.05, function() return state.scale end, function(value) model:SetSliderValue("scale", value, 0.6, 1.4, 0.05) end, function(value) return string.format("%.2f", value) end)
-    addSlider(content, "Opacity", 320, y, 150, 0.2, 1, 0.05, function() return state.opacity end, function(value) model:SetSliderValue("opacity", value, 0.2, 1, 0.05) end, function(value) return string.format("%.2f", value) end)
+    local scaleSlider = addSlider(content, "Scale", LEFT, y, 150, 0.6, 1.4, 0.05, function() return state.scale end, function(value) model:SetSliderValue("scale", value, 0.6, 1.4, 0.05) end, function(value) return string.format("%.2f", value) end)
+    local opacitySlider = addSlider(content, "Opacity", 320, y, 150, 0.2, 1, 0.05, function() return state.opacity end, function(value) model:SetSliderValue("opacity", value, 0.2, 1, 0.05) end, function(value) return string.format("%.2f", value) end)
+    registerRefresh(function() scaleSlider:RefreshValue() end)
+    registerRefresh(function() opacitySlider:RefreshValue() end)
     y = y - 36
-    addButton(content, "Test Frame", LEFT, y, 105, function() model:RecordAction("Test Frame") end, "Prototype action only; the live encounter frame is not changed.")
-    addButton(content, "Reset Position", 130, y, 120, function() model:RecordAction("Reset Position") end, "Prototype action only; the saved frame position is not changed.")
+    addButton(content, "Test Frame", LEFT, y, 105, function() model:RunAction("Test Frame") end, "Show deterministic test rows outside an encounter.")
+    addButton(content, "Reset Position", 130, y, 120, function() model:RunAction("Reset Position") end, "Reset position, scale, and opacity.")
 
     y = y - 48
     _, y = addSection(content, y, "Debuff Groups")
@@ -401,11 +424,16 @@ function PB.ConfigPanel:Build(panel)
             rowBackground:SetColorTexture(0.06, 0.06, 0.08, 0.28)
         end
         addText(content, group.label, "GameFontHighlight", LEFT, y - 3, 270)
-        addCheckbox(content, "", 304, y + 2, function() return groupState.enabled end, function(value) model:SetGroupValue(groupKey, "enabled", value) end)
-        addCheckbox(content, "", 402, y + 2, function() return groupState.required end, function(value) model:SetGroupValue(groupKey, "required", value) end)
+        local enabledCheckbox = addCheckbox(content, "", 304, y + 2, function() return groupState.enabled end, function(value) model:SetGroupValue(groupKey, "enabled", value) end)
+        local requiredCheckbox = addCheckbox(content, "", 402, y + 2, function() return groupState.required end, function(value) model:SetGroupValue(groupKey, "required", value) end)
         local availability = addText(content, groupState.availability, "GameFontHighlightSmall", 500, y - 3)
-        local availabilityColor = PB.ConfigPanel:GetAvailabilityStyle(groupState.availability)
-        availability:SetTextColor(availabilityColor[1], availabilityColor[2], availabilityColor[3], availabilityColor[4])
+        registerRefresh(function()
+            enabledCheckbox:RefreshValue()
+            requiredCheckbox:RefreshValue()
+            availability:SetText(groupState.availability)
+            local availabilityColor = PB.ConfigPanel:GetAvailabilityStyle(groupState.availability)
+            availability:SetTextColor(availabilityColor[1], availabilityColor[2], availabilityColor[3], availabilityColor[4])
+        end)
         y = y - ROW_HEIGHT
     end
 
@@ -417,10 +445,11 @@ function PB.ConfigPanel:Build(panel)
         local _, control
         for _, control in ipairs(alertControls) do setEnabled(control, enabled) end
     end
-    addCheckbox(content, "Enable broadcasts", LEFT, y, function() return state.alerts.enabled end, function(value)
+    local broadcastEnabled = addCheckbox(content, "Enable broadcasts", LEFT, y, function() return state.alerts.enabled end, function(value)
         model:SetAlertsEnabled(value)
         refreshAlertControls()
     end)
+    registerRefresh(function() broadcastEnabled:RefreshValue(); refreshAlertControls() end)
     y = y - 30
     addText(content, "Destination", "GameFontHighlight", LEFT, y - 4)
     local channelButtons = addChoice(content, {
@@ -430,16 +459,19 @@ function PB.ConfigPanel:Build(panel)
     }, 105, y - 7, function() return state.alerts.channel end, function(value) model:SetAlertChannel(value) end)
     local _, channelButton
     for _, channelButton in ipairs(channelButtons) do alertControls[#alertControls + 1] = channelButton end
+    registerRefresh(function() if channelButtons[1].RefreshSelection then channelButtons[1]:RefreshSelection() end end)
     local delaySlider = addSlider(content, "Delay", 350, y, 130, 0, 60, 1, function() return state.alerts.delay end, function(value) model:SetAlertDelay(value) end, function(value) return tostring(value) .. " sec" end)
     alertControls[#alertControls + 1] = delaySlider
+    registerRefresh(function() delaySlider:RefreshValue() end)
     y = y - 28
-    local alertTest = addButton(content, "Test Alert", LEFT, y, 90, function() model:RecordAction("Test Alert") end, "Records a prototype action and does not send chat.")
+    local alertTest = addButton(content, "Test Alert", LEFT, y, 90, function() model:RunAction("Test Alert") end, "Run the explicit local-only broadcast test outside combat.")
     alertControls[#alertControls + 1] = alertTest
     refreshAlertControls()
 
     y = y - 38
     _, y = addSection(content, y, "Summary")
-    addCheckbox(content, "Print encounter summary automatically", LEFT, y, function() return state.summaryAuto end, function(value) model:SetValue("summaryAuto", value) end)
+    local summaryAuto = addCheckbox(content, "Print encounter summary automatically", LEFT, y, function() return state.summaryAuto end, function(value) model:SetSummaryAuto(value) end)
+    registerRefresh(function() summaryAuto:RefreshValue() end)
 
     y = y - 42
     local diagnostics = CreateFrame("Frame", nil, content)
@@ -455,20 +487,32 @@ function PB.ConfigPanel:Build(panel)
         model:ToggleDiagnostics()
         refreshDiagnostics()
     end)
-    addSegment(diagnostics, "Validate Spell IDs", 0, 0, 125, function() model:RecordAction("Validate Spell IDs") end)
-    addSegment(diagnostics, "Roster", 133, 0, 80, function() model:RecordAction("Roster") end)
-    addSegment(diagnostics, "Debug Scan", 221, 0, 95, function() model:RecordAction("Debug Scan") end)
-    addSegment(diagnostics, "Dump", 324, 0, 75, function() model:RecordAction("Dump") end)
-    addCheckbox(diagnostics, "Debug output", 0, -31, function() return state.debug end, function(value) model:SetValue("debug", value) end)
+    addSegment(diagnostics, "Validate Spell IDs", 0, 0, 125, function() model:RunAction("Validate Spell IDs") end)
+    addSegment(diagnostics, "Roster", 133, 0, 80, function() model:RunAction("Roster") end)
+    addSegment(diagnostics, "Debug Scan", 221, 0, 95, function() model:RunAction("Debug Scan") end)
+    addSegment(diagnostics, "Dump", 324, 0, 75, function() model:RunAction("Dump") end)
+    local debugOutput = addCheckbox(diagnostics, "Debug output", 0, -31, function() return state.debug end, function(value) model:SetDebug(value) end)
+    registerRefresh(function() debugOutput:RefreshValue() end)
     panel.alertControls = alertControls
     panel.diagnostics = diagnostics
     refreshDiagnostics()
+    self:RefreshControls()
+end
+
+function PB.ConfigPanel:RefreshControls()
+    if not self.panel or not self.panel.built then return end
+    PB.ConfigPanelModel:Refresh()
+    local _, refresh
+    for _, refresh in ipairs(self.panel.refreshers or {}) do refresh() end
 end
 
 function PB.ConfigPanel:Initialize(api)
     if self.panel then return true end
     local panel = CreateFrame("Frame", "ParseBuddyOptionsPanel", UIParent)
     panel.name = "ParseBuddy"
-    panel:SetScript("OnShow", function(frame) PB.ConfigPanel:Build(frame) end)
+    panel:SetScript("OnShow", function(frame)
+        PB.ConfigPanel:Build(frame)
+        PB.ConfigPanel:RefreshControls()
+    end)
     return self:Register(panel, api)
 end

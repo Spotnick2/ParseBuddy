@@ -33,10 +33,10 @@ Tagline: "Your wingman for cleaner raid parses."
 - Do not infer talents, specs, improved effects, learned ranks, assignments, or responsibility from class presence. `NOT AVAILABLE` is informational and hidden by default in Problems Only through a scoped setting; Full List always shows enabled unavailable groups.
 - Missing-debuff broadcasts are opt-in and frozen at encounter start. Only enabled, required, roster-available groups may alert after grace plus delay. Alerts are transition-based, re-arm only after satisfaction, and use separate deferred callbacks with global and per-group cooldowns. Never send chat directly from CLEU, aura scans, UI rendering, or the display ticker.
 - Broadcast destinations are explicit party, raid, or cached group leader. If the selected destination is unavailable, suppress the alert and emit only conditional local debug output. Never fall back to another public channel or include roster member names in automatic broadcast text.
-- The AddOns settings panel is currently a static UX prototype. Its state must remain isolated in `ParseBuddy.ConfigPrototype`, must reset on reload, and must never read or write either SavedVariables table until real settings wiring is explicitly requested.
+- The AddOns settings panel is live and applies changes immediately through existing module APIs. Do not duplicate settings ownership or bypass scope-copying, encounter-refresh, combat guards, or diagnostic safeguards in widget callbacks.
 - Prefer the modern Blizzard canvas settings API with the legacy Interface Options fallback. Keep one fixed header and one scrollable task-oriented page; do not reintroduce custom tabs, nested scroll frames, excessive bordered boxes, or a Save/Apply workflow.
 - Keep the configuration reading surface dark enough to separate settings text from the game world, and keep diagnostic actions visually secondary to actual settings.
-- Prototype segmented controls must have explicit selected, unselected, and disabled styles. Use dependency-free custom slider tracks because the Anniversary `OptionsSliderTemplate` did not render a usable track in acceptance testing. Group requirement uses one checkbox where unchecked means Optional.
+- Segmented controls must have explicit selected, unselected, and disabled styles. Use dependency-free custom slider tracks because the Anniversary `OptionsSliderTemplate` did not render a usable track in acceptance testing. Group requirement uses one checkbox where unchecked means Optional.
 - Global settings use `ParseBuddyDB.settings`; per-character personal settings use `ParseBuddyCharDB.settings`, selected by `ParseBuddyCharDB.activeScope`. Frame position, scale, opacity, and lock state remain account-wide in `ParseBuddyDB.frame`.
 - Personal settings are copied from current global settings only on first selection. Scope switching must preserve both stores without merging or overwriting later edits.
 - The encounter summary is group-level, single-primary, and memory-only. It accrues satisfied, partial, and missing intervals after grace from evaluator transitions; it must not retain raw CLEU history, score players, scan auras, or persist summaries across reloads.
@@ -103,9 +103,9 @@ Do not implement more than the requested milestone. The first priorities are add
 - `Broadcast.lua`: frozen opt-in alert settings, pending transition state, bounded deferred delivery, cooldowns, and chat routing.
 - `Encounter.lua`: encounter lifecycle, boss GUID/unit-token tracking, opportunistic scan triggers, and the display-only ticker.
 - `Events.lua`: event registration and lightweight CLEU dispatch.
-- `Config.lua`: global/personal scope selection, scoped display/group settings, and slash-command settings access. The static prototype must not call it.
-- `ConfigPrototype.lua`: deterministic, memory-only fake settings used exclusively by the static configuration UX prototype.
-- `ConfigPanel.lua`: dependency-free Blizzard settings registration, opening, and static prototype rendering.
+- `Config.lua`: global/personal scope selection, scoped display/group settings, and slash-command settings access.
+- `ConfigModel.lua`: thin live adapter between panel controls and existing settings/UI/diagnostic module APIs.
+- `ConfigPanel.lua`: dependency-free Blizzard settings registration, opening, rendering, and control refresh.
 
 ## Versioning
 
@@ -123,7 +123,7 @@ Verify the TOC Interface against the installed TBC Anniversary client before rel
 - `/pb profile global|personal`, `/pb groups`, and `/pb group <key> ...` manage scoped settings. Stable group keys are part of the command contract.
 - `/pb unavailable show|hide` controls the scoped Problems Only visibility of `NOT AVAILABLE` rows; `/pb roster` prints the cache and must not refresh it.
 - `/pb broadcast on|off`, `/pb broadcast channel party|raid|leader`, and `/pb broadcast delay 0-60` manage scoped next-encounter alert settings. `/pb broadcast test` is explicit, deterministic, local-only, and blocked in combat.
-- `/pb` opens the static configuration prototype; `/pb help` remains the slash-command reference. Explicit commands continue to operate normally outside the prototype.
+- `/pb` opens the live configuration panel; `/pb help` remains the slash-command reference. Explicit commands and panel controls share the same settings stores and module APIs.
 - `/pb snapshot` prints the automatically captured diagnostic snapshot from the most recently completed encounter.
 - `/pb clear` clears both `ParseBuddy.lastEncounterSnapshot` and `ParseBuddyDB.lastEncounterSnapshot`.
 - `/pb summary` prints the latest in-memory summary; `/pb summary auto on|off` controls account-wide automatic output, off by default. `/pb clear` also clears the completed summary without stopping an active accumulator.
@@ -140,4 +140,4 @@ Verify the TOC Interface against the installed TBC Anniversary client before rel
 ## Deferred Optional Features
 
 - Multiple boss UI sections, multi-boss summary aggregation, a graphical summary window, historical summaries, and persistence remain deferred. Do not turn summaries into player scoring, blame, ranking, or a full post-raid parser.
-- Sounds, assignments, provider whispers, talent/spec inspection, additional groups, import/export, a configuration window, and player scoring remain deferred.
+- Sounds, assignments, provider whispers, talent/spec inspection, additional groups, import/export, named profile management, and player scoring remain deferred.

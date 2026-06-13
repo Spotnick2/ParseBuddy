@@ -4,7 +4,7 @@
 ## Title: ParseBuddy
 ## Notes: Your wingman for cleaner raid parses.
 ## Author: TODO
-## Version: 0.1.7.15
+## Version: 0.1.8.0
 ## SavedVariables: ParseBuddyDB
 ## SavedVariablesPerCharacter: ParseBuddyCharDB
 
@@ -22,5 +22,5 @@ Broadcast.lua
 Encounter.lua
 Events.lua
 Config.lua
-ConfigPrototype.lua
+ConfigModel.lua
 ConfigPanel.lua

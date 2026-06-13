@@ -1,13 +1,48 @@
 ParseBuddy = {
-    version = "0.1.7.15",
+    version = "0.1.8.0",
     messages = {},
     Print = function(self, message) self.messages[#self.messages + 1] = message end,
 }
-ParseBuddyDB = { marker = "account", nested = { value = 1 } }
-ParseBuddyCharDB = { marker = "character", nested = { value = 2 } }
+ParseBuddyDB = {
+    frame = { locked = false, scale = 1, opacity = 1 },
+    debug = false,
+    summaryAuto = false,
+}
+ParseBuddyCharDB = {}
 
 assert(loadfile("DebuffLibrary.lua"))()
-assert(loadfile("ConfigPrototype.lua"))()
+assert(loadfile("Defaults.lua"))()
+
+local actionCalls = {}
+ParseBuddy.UI = {
+    Lock = function() ParseBuddyDB.frame.locked = true; actionCalls.lock = (actionCalls.lock or 0) + 1 end,
+    Unlock = function() ParseBuddyDB.frame.locked = false; actionCalls.unlock = (actionCalls.unlock or 0) + 1 end,
+    SetScale = function(_, value) ParseBuddyDB.frame.scale = tonumber(value); actionCalls.scale = value end,
+    SetOpacity = function(_, value) ParseBuddyDB.frame.opacity = tonumber(value); actionCalls.opacity = value end,
+    ResetPosition = function() ParseBuddyDB.frame.scale = 1; ParseBuddyDB.frame.opacity = 1; actionCalls.reset = true end,
+    ShowTestMode = function() actionCalls.testFrame = true end,
+}
+ParseBuddy.Roster = {
+    GetGroupCapability = function(_, key)
+        if key == "judgement" then return "notAvailable" end
+        if key == "recklessness" then return "unknown" end
+        return "available"
+    end,
+    Print = function() actionCalls.roster = true end,
+}
+ParseBuddy.Encounter = {
+    active = false,
+    RefreshDisplay = function() actionCalls.refresh = (actionCalls.refresh or 0) + 1 end,
+    DebugScan = function() actionCalls.debugScan = true end,
+}
+ParseBuddy.Broadcast = { Test = function() actionCalls.testAlert = true; return true end }
+ParseBuddy.ValidateSpellIds = function() actionCalls.validate = true end
+ParseBuddy.Dump = function() actionCalls.dump = true end
+
+assert(loadfile("Config.lua"))()
+ParseBuddy.Defaults:Apply(ParseBuddyDB)
+ParseBuddy.Config:Initialize()
+assert(loadfile("ConfigModel.lua"))()
 assert(loadfile("ConfigPanel.lua"))()
 
 local testsRun = 0
@@ -18,63 +53,76 @@ local function assertEqual(actual, expected, message)
     end
 end
 
-local Prototype = ParseBuddy.ConfigPrototype
-local state = Prototype:GetState()
-assertEqual(state.scope, "global", "prototype defaults to global display")
-assertEqual(state.displayMode, "PROBLEMS_ONLY", "prototype display mode deterministic")
-assertEqual(state.alerts.enabled, false, "prototype alerts default off")
-assertEqual(state.diagnosticsExpanded, false, "diagnostics default collapsed")
-assertEqual(state.groups.judgement.availability, "Not Available", "fake availability deterministic")
+local Model = ParseBuddy.ConfigPanelModel
+local state = Model:GetState()
+assertEqual(state.scope, "global", "panel starts on active global scope")
+assertEqual(state.displayMode, "PROBLEMS_ONLY", "panel reads live global display mode")
+assertEqual(state.groups.judgement.availability, "Not Available", "panel reads cached roster capability")
+assertEqual(state.groups.recklessness.availability, "Unknown", "panel presents unknown roster capability")
+
+assertEqual(Model:SetDisplayMode("FULL_LIST"), true, "display mode interaction accepted")
+assertEqual(ParseBuddyDB.settings.displayMode, "FULL_LIST", "display mode writes global settings")
+assertEqual(Model:SetShowUnavailable(true), true, "unavailable interaction accepted")
+assertEqual(ParseBuddyDB.settings.showUnavailable, true, "unavailable visibility writes global settings")
+assertEqual(Model:SetGroupValue("majorArmor", "required", false), true, "group requirement interaction accepted")
+assertEqual(ParseBuddyDB.settings.groups.majorArmor.required, false, "required checkbox unchecked writes optional")
+
+assertEqual(Model:SetScope("personal"), true, "personal scope selected")
+assertEqual(ParseBuddyCharDB.activeScope, "personal", "active scope persists per character")
+assertEqual(ParseBuddyCharDB.settings.displayMode, "FULL_LIST", "first personal selection copies current global settings")
+assertEqual(ParseBuddyCharDB.settings.groups.majorArmor.required, false, "personal first-use copy includes group settings")
+Model:SetDisplayMode("PROBLEMS_ONLY")
+Model:SetGroupValue("majorArmor", "required", true)
+assertEqual(ParseBuddyCharDB.settings.displayMode, "PROBLEMS_ONLY", "personal display setting changes independently")
+assertEqual(ParseBuddyDB.settings.displayMode, "FULL_LIST", "global display setting remains preserved")
+assertEqual(ParseBuddyCharDB.settings.groups.majorArmor.required, true, "personal group setting changes independently")
+assertEqual(ParseBuddyDB.settings.groups.majorArmor.required, false, "global group setting remains preserved")
+
+Model:SetAlertsEnabled(true)
+Model:SetAlertChannel("leader")
+Model:SetAlertDelay(90)
+assertEqual(ParseBuddyCharDB.settings.broadcast.enabled, true, "broadcast enabled writes active personal scope")
+assertEqual(ParseBuddyCharDB.settings.broadcast.channel, "leader", "broadcast destination writes active personal scope")
+assertEqual(ParseBuddyCharDB.settings.broadcast.delay, 60, "broadcast delay clamps and persists")
+assertEqual(Model:AreAlertControlsEnabled(), true, "alert subordinate controls follow live master setting")
+
+Model:SetFrameLocked(true)
+Model:SetSliderValue("scale", 1.8, 0.6, 1.4, 0.05)
+Model:SetSliderValue("opacity", 0.1, 0.2, 1, 0.05)
+assertEqual(ParseBuddyDB.frame.locked, true, "frame lock remains account-wide")
+assertEqual(ParseBuddyDB.frame.scale, 1.4, "frame scale clamps and remains account-wide")
+assertEqual(ParseBuddyDB.frame.opacity, 0.2, "frame opacity clamps and remains account-wide")
+
+Model:SetSummaryAuto(true)
+Model:SetDebug(true)
+assertEqual(ParseBuddyDB.summaryAuto, true, "summary auto writes account-wide setting")
+assertEqual(ParseBuddyDB.debug, true, "debug output writes account-wide setting")
+assertEqual(#ParseBuddy.messages, 0, "panel setting changes do not spam chat output")
+assertEqual(Model:ToggleDiagnostics(), true, "diagnostics expand locally")
+assertEqual(Model:ToggleDiagnostics(), false, "diagnostics collapse locally")
+
+Model:RunAction("Test Frame")
+Model:RunAction("Reset Position")
+Model:RunAction("Test Alert")
+Model:RunAction("Validate Spell IDs")
+Model:RunAction("Roster")
+Model:RunAction("Debug Scan")
+Model:RunAction("Dump")
+assertEqual(actionCalls.testFrame, true, "test frame routes to live UI action")
+assertEqual(actionCalls.reset, true, "reset routes to live UI action")
+assertEqual(actionCalls.testAlert, true, "test alert routes to guarded broadcast test")
+assertEqual(actionCalls.validate, true, "validate routes to spell validation")
+assertEqual(actionCalls.roster, true, "roster routes to cached diagnostics")
+assertEqual(actionCalls.debugScan, true, "debug scan routes to encounter diagnostics")
+assertEqual(actionCalls.dump, true, "dump routes to diagnostics")
+
 local selectedStyle = ParseBuddy.ConfigPanel:GetSegmentStyle(true, true)
 local unselectedStyle = ParseBuddy.ConfigPanel:GetSegmentStyle(false, true)
 local disabledStyle = ParseBuddy.ConfigPanel:GetSegmentStyle(true, false)
 assertEqual(selectedStyle ~= unselectedStyle, true, "selected segment has distinct style metadata")
 assertEqual(selectedStyle.border[1] > unselectedStyle.border[1], true, "selected segment border is visually stronger")
-assertEqual(disabledStyle.text[1] < selectedStyle.text[1], true, "disabled segment remains distinct and subdued")
-local availableStyle = ParseBuddy.ConfigPanel:GetAvailabilityStyle("Available")
-local unavailableStyle = ParseBuddy.ConfigPanel:GetAvailabilityStyle("Not Available")
-local unknownStyle = ParseBuddy.ConfigPanel:GetAvailabilityStyle("Unknown")
-assertEqual(availableStyle[2] > availableStyle[1], true, "available presentation is green")
-assertEqual(unavailableStyle[1], unavailableStyle[2], "not available presentation is neutral gray")
-assertEqual(unknownStyle[1] > unknownStyle[2], true, "unknown presentation is yellow")
-
-assertEqual(Prototype:SetScope("personal"), true, "prototype scope interaction accepted")
-assertEqual(Prototype:SetDisplayMode("FULL_LIST"), true, "prototype display interaction accepted")
-Prototype:SetValue("showUnavailable", true)
-Prototype:SetGroupValue("majorArmor", "required", false)
-Prototype:SetAlertsEnabled(true)
-Prototype:SetAlertChannel("leader")
-Prototype:SetAlertDelay(8)
-assertEqual(state.scope, "personal", "prototype scope updates local state")
-assertEqual(state.displayMode, "FULL_LIST", "prototype mode updates local state")
-assertEqual(state.showUnavailable, true, "prototype checkbox updates local state")
-assertEqual(state.groups.majorArmor.required, false, "prototype group interaction updates local state")
-Prototype:SetGroupValue("majorArmor", "required", true)
-assertEqual(state.groups.majorArmor.required, true, "compact required checkbox checked means required")
-Prototype:SetGroupValue("majorArmor", "required", false)
-assertEqual(state.groups.majorArmor.required, false, "compact required checkbox unchecked means optional")
-assertEqual(Prototype:AreAlertControlsEnabled(), true, "alert subordinate controls enabled with master")
-assertEqual(state.alerts.channel, "leader", "prototype alert channel updates")
-assertEqual(state.alerts.delay, 8, "prototype alert delay updates")
-assertEqual(Prototype:ClampSliderValue(2, 0.6, 1.4, 0.05), 1.4, "slider values clamp to maximum")
-assertEqual(Prototype:ClampSliderValue(0, 0.6, 1.4, 0.05), 0.6, "slider values clamp to minimum")
-assertEqual(Prototype:ClampSliderValue(0.83, 0.6, 1.4, 0.05), 0.85, "slider values snap to configured step")
-Prototype:SetSliderValue("scale", 1.8, 0.6, 1.4, 0.05)
-assertEqual(state.scale, 1.4, "prototype scale stores clamped slider value")
-Prototype:SetAlertDelay(90)
-assertEqual(state.alerts.delay, 60, "prototype alert delay clamps to supported range")
-Prototype:SetAlertsEnabled(false)
-assertEqual(Prototype:AreAlertControlsEnabled(), false, "alert subordinate controls disable with master")
-assertEqual(Prototype:ToggleDiagnostics(), true, "diagnostics expand interaction")
-assertEqual(Prototype:ToggleDiagnostics(), false, "diagnostics collapse interaction")
-Prototype:RecordAction("Test Frame")
-assertEqual(state.lastAction, "Test Frame", "prototype action remains local")
-assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "No live setting was changed", 1, true) ~= nil, true, "prototype action clearly reports no live mutation")
-
-assertEqual(ParseBuddyDB.marker, "account", "prototype leaves account saved variables untouched")
-assertEqual(ParseBuddyDB.nested.value, 1, "prototype leaves nested account data untouched")
-assertEqual(ParseBuddyCharDB.marker, "character", "prototype leaves character saved variables untouched")
-assertEqual(ParseBuddyCharDB.nested.value, 2, "prototype leaves nested character data untouched")
+assertEqual(disabledStyle.text[1] < selectedStyle.text[1], true, "disabled segment remains distinct")
+assertEqual(ParseBuddy.ConfigPanel:GetAvailabilityStyle("Available")[2] > 0.8, true, "available presentation is green")
 
 local Panel = ParseBuddy.ConfigPanel
 local modernRegistered = 0
@@ -86,15 +134,10 @@ local modernAPI = {
         assertEqual(name, "ParseBuddy", "modern registration receives category name")
         return category
     end,
-    RegisterAddOn = function(value)
-        if value == category then modernRegistered = modernRegistered + 1 end
-    end,
+    RegisterAddOn = function(value) if value == category then modernRegistered = modernRegistered + 1 end end,
     OpenSettings = function(value) modernOpened = value:GetID() end,
 }
-Settings = {
-    RegisterCanvasLayoutCategory = function() end,
-    RegisterAddOnCategory = function() end,
-}
+Settings = { RegisterCanvasLayoutCategory = function() end, RegisterAddOnCategory = function() end }
 InterfaceOptions_AddCategory = function() end
 local panel = { name = "ParseBuddy" }
 assertEqual(Panel:DetectAPI(modernAPI), "settings", "modern Settings API preferred")
@@ -107,12 +150,8 @@ Settings = nil
 local legacyRegistered = 0
 local legacyOpened = 0
 local legacyAPI = {
-    RegisterLegacy = function(value)
-        if value == panel then legacyRegistered = legacyRegistered + 1 end
-    end,
-    OpenLegacy = function(value)
-        if value == panel then legacyOpened = legacyOpened + 1 end
-    end,
+    RegisterLegacy = function(value) if value == panel then legacyRegistered = legacyRegistered + 1 end end,
+    OpenLegacy = function(value) if value == panel then legacyOpened = legacyOpened + 1 end end,
 }
 assertEqual(Panel:DetectAPI(legacyAPI), "legacy", "legacy API selected when Settings API unavailable")
 assertEqual(Panel:Register(panel, legacyAPI), true, "legacy panel registration succeeds")

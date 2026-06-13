@@ -50,7 +50,7 @@ Patterns not to copy:
 
 ## Information Architecture
 
-The prototype is one scrollable task-oriented page beneath a fixed header.
+The panel is one scrollable task-oriented page beneath a fixed header.
 
 1. Display
 2. Debuff Groups
@@ -58,13 +58,13 @@ The prototype is one scrollable task-oriented page beneath a fixed header.
 4. Summary
 5. Diagnostics, collapsed by default
 
-The header always shows the addon version, the active prototype scope, and a prominent `PROTOTYPE ONLY - changes are not saved` notice.
+The header always shows the addon version, active settings scope, and an explicit `Changes apply immediately` notice.
 
 ## Textual Wireframe
 
 ```text
 ParseBuddy                                         v0.1.x
-Configuration prototype - changes are not saved
+Changes apply immediately
 Scope: [ Global ] [ Personal ]
 -----------------------------------------------------------
 Display
@@ -93,16 +93,18 @@ Summary
 
 ## Control Behavior
 
-- All values live only in `ParseBuddy.ConfigPrototype.state` and reset on `/reload`.
-- No prototype callback may read or write `ParseBuddyDB` or `ParseBuddyCharDB`.
-- Global/Personal is a compact segmented choice with an explicit gold selected state and does not switch the real settings scope.
+- Scoped values use `ParseBuddyDB.settings` or `ParseBuddyCharDB.settings` through `ParseBuddy.Config`.
+- Global/Personal switches the live scope. First use of Personal copies current Global settings; later switching preserves both stores.
+- Frame lock, scale, opacity, and position remain account-wide in `ParseBuddyDB.frame`.
+- Summary automatic output and debug output remain account-wide.
 - Problems Only/Full List and Party/Raid/Leader use the same selected/unselected segmented styling rather than dropdowns.
 - Each group uses one compact `Required` checkbox; unchecked means Optional.
 - Scale, opacity, and alert delay use custom dependency-free tracks with visible fill, thumb, and numeric value.
 - Group rows use alternating subtle backgrounds and availability text is green, gray, or yellow.
-- Alert destination, delay, and test controls are disabled when prototype alerts are off.
+- Availability reads the existing roster cache and repaints after cache refresh events; panel rendering never scans roster units.
+- Alert destination, delay, and test controls are disabled when alerts are off.
 - Diagnostics are collapsed by default and visually secondary.
-- Prototype action buttons record a local action and print a clearly marked prototype message. They do not invoke live addon behavior.
+- Action buttons call the same guarded module APIs as their slash-command equivalents.
 - No Save or Apply button is present.
 - `/pb` opens the panel. `/pb help` remains the command reference.
 
@@ -111,13 +113,13 @@ Summary
 - The panel appears under Options -> AddOns -> ParseBuddy.
 - Modern registration is preferred; legacy registration remains functional.
 - `/pb` opens the registered category.
-- The scope and prototype warning remain visible while scrolling.
+- The active scope and immediate-apply notice remain visible while scrolling.
 - The page uses one scroll container and no custom tabs.
-- Display choices and every group row update prototype-local state only.
+- Display choices and every group row update the active settings scope immediately.
 - Alert subordinate controls disable when alerts are off.
 - Diagnostics start collapsed and can be expanded without rebuilding the panel.
-- No interaction mutates either SavedVariables table.
-- Existing explicit slash commands and live encounter behavior remain unchanged.
+- Account-wide and personal values persist in their documented SavedVariables stores.
+- Existing explicit slash commands and panel controls remain behaviorally equivalent.
 
 ## Screenshot Review And Polish
 

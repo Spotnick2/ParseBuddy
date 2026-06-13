@@ -390,7 +390,7 @@ function PB.UI:Initialize()
     self.frame:Hide()
 end
 
-function PB.UI:SetScale(value)
+function PB.UI:SetScale(value, silent)
     if value == nil or value == "" then
         PB:Print(string.format("Frame scale: %.2f", ParseBuddyDB.frame.scale))
         return
@@ -404,10 +404,10 @@ function PB.UI:SetScale(value)
 
     ParseBuddyDB.frame.scale = scale
     self:ApplySavedScale()
-    PB:Print(string.format("Frame scale set to %.2f.", scale))
+    if not silent then PB:Print(string.format("Frame scale set to %.2f.", scale)) end
 end
 
-function PB.UI:SetOpacity(value)
+function PB.UI:SetOpacity(value, silent)
     if value == nil or value == "" then
         PB:Print(string.format("Frame opacity: %.2f", ParseBuddyDB.frame.opacity))
         return
@@ -421,7 +421,7 @@ function PB.UI:SetOpacity(value)
 
     ParseBuddyDB.frame.opacity = opacity
     self:ApplySavedOpacity()
-    PB:Print(string.format("Frame opacity set to %.2f.", opacity))
+    if not silent then PB:Print(string.format("Frame opacity set to %.2f.", opacity)) end
 end
 
 function PB.UI:ShowTestMode()
@@ -476,19 +476,19 @@ function PB.UI:HideEncounter()
     end
 end
 
-function PB.UI:Lock()
+function PB.UI:Lock(silent)
     ParseBuddyDB.frame.locked = true
     self:UpdateLockDisplay()
-    PB:Print("Frame locked.")
+    if not silent then PB:Print("Frame locked.") end
 end
 
-function PB.UI:Unlock()
+function PB.UI:Unlock(silent)
     ParseBuddyDB.frame.locked = false
     self:UpdateLockDisplay()
-    PB:Print("Frame unlocked. Drag the title area to move it.")
+    if not silent then PB:Print("Frame unlocked. Drag the title area to move it.") end
 end
 
-function PB.UI:ResetPosition()
+function PB.UI:ResetPosition(silent)
     ParseBuddyDB.frame.point = "CENTER"
     ParseBuddyDB.frame.relativePoint = "CENTER"
     ParseBuddyDB.frame.x = 0
@@ -498,5 +498,5 @@ function PB.UI:ResetPosition()
     self:ApplySavedPosition()
     self:ApplySavedScale()
     self:ApplySavedOpacity()
-    PB:Print("Frame position, scale, and opacity reset.")
+    if not silent then PB:Print("Frame position, scale, and opacity reset.") end
 end

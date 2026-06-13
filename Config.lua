@@ -44,7 +44,7 @@ function PB.Config:GetSettings()
     return ParseBuddyDB.settings
 end
 
-function PB.Config:SetScope(scope)
+function PB.Config:SetScope(scope, silent)
     scope = scope and scope:lower() or ""
     if scope == "" then
         PB:Print("Profile scope: " .. self:GetScope() .. ".")
@@ -59,7 +59,7 @@ function PB.Config:SetScope(scope)
         ParseBuddyCharDB.settings = PB.Defaults:CopySettings(ParseBuddyDB.settings)
     end
     ParseBuddyCharDB.activeScope = scope
-    PB:Print("Profile scope set to " .. scope .. ".")
+    if not silent then PB:Print("Profile scope set to " .. scope .. ".") end
     if PB.Encounter and PB.Encounter.active then
         PB.Encounter:RefreshDisplay()
     end

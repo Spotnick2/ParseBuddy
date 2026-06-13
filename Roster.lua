@@ -107,6 +107,9 @@ function PB.Roster:Refresh(reason, provider)
     end
 
     self.snapshot = snapshot
+    if PB.ConfigPanel and PB.ConfigPanel.RefreshControls then
+        PB.ConfigPanel:RefreshControls()
+    end
     return snapshot
 end
 

@@ -4,11 +4,13 @@
 
 ParseBuddy is an MVP World of Warcraft addon for TBC Anniversary. The implementation milestones are complete; supervised in-game acceptance is still required before treating it as raid-ready.
 
-The AddOns settings entry currently presents a static UX prototype. Its controls use deterministic in-memory values and intentionally do not change or persist live addon settings yet.
+The AddOns settings entry is live. Changes apply immediately through the same global/personal settings and guarded actions used by slash commands; there is no Save or Apply workflow.
 
-The polished prototype uses explicit selected segments, visible custom sliders, compact alternating group rows, one Required checkbox per group, colored availability, readable disabled controls, a dark reading surface, a visible scrollbar, and a secondary Diagnostics disclosure row.
+The settings panel uses explicit selected segments, visible custom sliders, compact alternating group rows, one Required checkbox per group, colored availability, readable disabled controls, a dark reading surface, a visible scrollbar, and a secondary Diagnostics disclosure row.
 
 All standalone segmented actions initialize with the same neutral styling as unselected choices; they do not depend on a later interaction to become readable.
+
+Availability is read from the cached roster snapshot and repaints when that low-frequency cache updates; the settings panel never scans roster units itself.
 
 ## Core Concept
 
@@ -36,7 +38,7 @@ Equivalent effects will share one row. For example, Sunder Armor and Expose Armo
 
 Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live debuff rows, known-duration expiration, and opportunistic visible-boss aura resync. Missing groups remain gray during the pull grace period and turn red afterward. Active effects update immediately from combat-log aura events. If the client does not expose `boss1` through `boss5`, ParseBuddy can learn a provisional non-friendly NPC target from the first tracked non-removal aura event. This includes neutral encounter targets such as Midnight while continuing to reject players, pets, guardians, and friendly NPCs. A later destination whose localized name exactly matches the encounter name can replace that provisional target. Previously visible or encounter-matched bosses take precedence over newly discovered adds and can reclaim the display from their combat-log activity. `/pb test` is blocked during active encounters so fake rows cannot replace live data.
 
-- `/pb` or `/parsebuddy`: open the static configuration prototype
+- `/pb` or `/parsebuddy`: open the live configuration panel
 - `/pb help`: show help
 - `/pb test`: show the deterministic test frame
 - `/pb mode problems`: use Problems Only during live encounters
@@ -86,7 +88,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 5. CLEU aura tracking for six MVP groups
 6. Complete: opportunistic boss aura resync and timer expiration
 7. Complete: debug tools, polish, and in-game acceptance checklist
-8. Complete: configuration UX discovery and static Blizzard settings prototype
+8. Complete: configuration UX discovery, Blizzard settings panel, and live settings wiring
 
 ## Non-Goals
 
@@ -98,7 +100,6 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 
 ## Not Yet Implemented
 
-- Wiring the configuration prototype to real global/personal settings and live addon behavior
 - Named profiles beyond the implemented global account scope and personal per-character scope
 - Additional optional debuff groups beyond Curse of Recklessness and boss-specific profiles
 - Multi-boss display sections
@@ -113,9 +114,10 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - `/pb` and `/parsebuddy` both show help.
 - `/pb validate` reports the configured spell-ID total and identifies any IDs unavailable in the current client.
 - ParseBuddy appears under Game Menu -> Options -> AddOns. `/pb` opens the same category while `/pb help` still prints commands.
-- The configuration page clearly says `PROTOTYPE`, keeps version/scope visible above one scroll area, and has no custom tabs or Save/Apply button.
-- Prototype controls update deterministic local values only. They reset after `/reload` and do not modify `ParseBuddyDB`, `ParseBuddyCharDB`, the encounter frame, or live combat behavior.
-- Alert destination/delay/test controls visibly disable while prototype alerts are off, and Diagnostics starts collapsed.
+- The configuration page keeps version/scope visible above one scroll area and has no custom tabs or Save/Apply button.
+- Global and Personal scope changes persist independently; first use of Personal copies the current Global settings.
+- Frame lock, scale, opacity, and reset update account-wide frame settings immediately.
+- Alert destination/delay/test controls visibly disable while alerts are off, and Diagnostics starts collapsed.
 - Selected scope/mode/destination choices are visually distinct from unselected choices. Scale, opacity, and delay sliders show a track, fill, thumb, and numeric value.
 - Group rows are compact and aligned; Required checked means required, unchecked means optional. Availability is green, gray, or yellow for Available, Not Available, or Unknown.
 - `/pb test` shows seven deterministic green, yellow, red, and gray preview rows.
