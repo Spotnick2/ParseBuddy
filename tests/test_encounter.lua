@@ -46,6 +46,29 @@ ParseBuddy = {
             return result
         end,
         EvaluateBoss = function() return { { state = "missing" } } end,
+        GetUnitDebuffs = function(self, unitToken)
+            self.debugAuraUnit = unitToken
+            return {
+                {
+                    index = 1,
+                    spellId = 25203,
+                    name = "Demoralizing Shout",
+                    stacks = 1,
+                    expirationTime = 115,
+                    sourceName = "Zukh",
+                },
+                {
+                    index = 2,
+                    spellId = 99999,
+                    name = "Untracked Aura",
+                },
+            }, 2
+        end,
+    },
+    DebuffLibrary = {
+        spellIdToGroupKey = {
+            [25203] = "attackPower",
+        },
     },
     UI = {
         calls = {},
@@ -209,10 +232,22 @@ UnitExists = function(unitToken) return unitToken == "target" end
 UnitGUID = function(unitToken) return unitToken == "target" and "Creature-M" or nil end
 assertEqual(Encounter:ResyncBossGUID("Creature-M", "cleu"), true, "hidden fallback boss can resync from exact target GUID")
 assertEqual(ParseBuddy.State.lastScanUnit, "target", "exact target unit is used for hidden fallback scan")
+local debugAuraMessagesBefore = #ParseBuddy.messages
+local debugAuraUnits, debugAuraCount = Encounter:DebugAuras()
+assertEqual(debugAuraUnits, 1, "debugauras scans exact target unit")
+assertEqual(debugAuraCount, 2, "debugauras reports all harmful auras")
+assertEqual(ParseBuddy.State.debugAuraUnit, "target", "debugauras reads exact target")
+local debugAuraOutput = table.concat(ParseBuddy.messages, "\n", debugAuraMessagesBefore + 1)
+assertEqual(debugAuraOutput:find("spellId=25203", 1, true) ~= nil, true, "debugauras prints tracked spell ID")
+assertEqual(debugAuraOutput:find("tracked=attackPower", 1, true) ~= nil, true, "debugauras labels tracked group")
+assertEqual(debugAuraOutput:find("spellId=99999", 1, true) ~= nil, true, "debugauras prints untracked spell ID")
 UnitGUID = function(unitToken) return unitToken == "target" and "Creature-Other" or nil end
 local scansBeforeNonMatch = ParseBuddy.State.scans
 assertEqual(Encounter:ResyncBossGUID("Creature-M", "cleu"), false, "nonmatching target GUID is not scanned")
 assertEqual(ParseBuddy.State.scans, scansBeforeNonMatch, "nonmatching target does not scan auras")
+local debugAuraUnitsNonMatch, debugAuraCountNonMatch = Encounter:DebugAuras()
+assertEqual(debugAuraUnitsNonMatch, 0, "debugauras refuses nonmatching target")
+assertEqual(debugAuraCountNonMatch, 0, "debugauras reports no auras for nonmatching target")
 UnitExists = function() return false end
 UnitGUID = function() return nil end
 

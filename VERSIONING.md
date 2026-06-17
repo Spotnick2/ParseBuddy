@@ -17,4 +17,6 @@ The completed MVP implementation line is `0.1.7.0`. Follow-up acceptance fixes i
 
 `0.1.8.1` allows known fallback bosses without `boss1`-`boss5` mappings to opportunistically resync auras from exact-match `target` or `focus` units, fixing client-visible Judgements that were locally expired.
 
+`0.1.8.2` adds `/pb debugauras`, a read-only exact-boss target/focus diagnostic that prints all harmful aura names, spell IDs, remaining times, sources, and tracked group labels without mutating encounter state.
+
 `ParseBuddy.toc` is the authoritative version source. Lua code should read the version using addon metadata instead of maintaining a second constant.

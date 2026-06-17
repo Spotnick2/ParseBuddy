@@ -68,6 +68,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - `/pb snapshot`: print the automatically captured diagnostic snapshot from the most recently completed encounter
 - `/pb clear`: clear the in-memory and persisted diagnostic snapshot
 - `/pb debugscan`: rescan tracked debuffs on mapped boss units, including exact-match `target`/`focus` for fallback bosses
+- `/pb debugauras`: print every harmful aura on the exact active boss `target`/`focus` or visible boss unit, including spell IDs and tracked group labels
 - `/pb validate`: verify every configured spell ID with the current client spell APIs
 - Title-bar lock icon: toggle between movable and locked states
 - `/pb lock`: lock the frame position
@@ -159,6 +160,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - Applying, refreshing, stacking, or removing a tracked boss debuff updates its group row immediately.
 - Known-duration rows count down, turn yellow at the warning threshold, and become missing after expiration without requiring a removal event.
 - `/pb debugscan` reports the number of visible boss units scanned and tracked auras found.
+- `/pb debugauras` prints all harmful aura names and spell IDs from the exact active boss unit without changing tracked state.
 - A boss unit appearing with existing debuffs, or a missed earlier CLEU application, can recover tracked auras through a visible-unit scan.
 - Expose Armor uses the client-reported timer when the boss is visible and does not invent a fixed duration otherwise.
 - A boss disappearing from `boss1` through `boss5` is hidden without ending encounter state; a later tracked aura event on that known boss can reclaim the display.
@@ -182,21 +184,22 @@ Run these checks after `/reload` with Lua errors enabled:
 8. Use `/pb mode problems`. Verify healthy green rows disappear; required missing/grace, partial, expiring, and unknown-source rows remain; unavailable rows are hidden by default; and the frame compacts without stale rows. Toggle `/pb unavailable show` and verify gray unavailable rows appear without affecting Full List.
 9. Apply and remove each available tracked debuff. Confirm CLEU changes appear immediately and known timers expire without requiring a removal event.
 10. Run `/pb debugscan` while the boss is visible. Confirm the boss count and tracked-aura count match the frame.
-11. Run `/pb dump`. Confirm the primary GUID, scan reason, candidate expiration source, and visible evaluations match the boss.
-12. Retest Magtheridon: a channeler may seed the provisional display, but Magtheridon must replace it when identified and CoE must remain active in that event tick.
-13. On a phase transition, verify an unrelated add cannot replace a previously visible boss and relevant activity can reclaim the known boss.
-14. End or wipe the encounter. Confirm the ticker stops and the frame hides without stale test or encounter rows.
-15. After combat, run `/pb snapshot` and `/pb dump`. Confirm both show `COMPLETED SNAPSHOT`, `active=no`, final raw candidates, final evaluations, and the retained last meaningful live evaluations. Reload once and confirm the snapshot remains available, then clear it with `/pb clear`.
-16. Run `/pb summary`. Confirm total duration, grace-excluded measured duration, frozen scope/mode, and per-enabled-group satisfied/partial/missing seconds and percentages.
-17. Verify Sunder partial-to-five-stack and Sunder-to-Expose handoffs produce the expected group totals without a false missing gap. Let a known-duration effect expire without a removal event and confirm missing time begins at expiration.
-18. Enable `/pb summary auto on`, complete or wipe an encounter, and confirm automatic output. Disable it afterward and verify `/pb clear` clears both the diagnostic snapshot and completed summary.
-19. On Opera Hall encounter `655`, run `/pb targets`. Confirm configured NPC IDs `17533` and `17534`, accepted Romulo/Julianne GUIDs, current primary, and selection reason.
-20. Apply a tracked debuff to each Opera boss. Confirm relevant activity can switch the single-primary display when no higher-priority visible target exists, both bosses retain independent candidates, and tracked effects on unregistered adds do not change the primary.
-21. Run `/pb roster` while solo, in a party, and in a raid. Confirm cached members/classes and group capabilities match the roster. Remove the only provider for a group, wait for `GROUP_ROSTER_UPDATE`, and verify its missing/grace row becomes `NOT AVAILABLE` without any repeated roster scanning during combat.
-22. Run `/pb broadcast` and confirm it is off by default. Configure a personal or global channel and delay, switch scopes, and verify both settings stores remain independent.
-23. Out of combat, run `/pb broadcast test` and confirm it prints a clearly marked local-only message. Run it during combat and confirm it is blocked.
-24. Enable broadcasts for a supervised pull. Verify a required, roster-available missing group alerts once after grace plus delay; optional, disabled, partial, `NOT AVAILABLE`, and unknown-capability groups do not alert. Apply the effect, remove it again, and verify re-alerting respects the 30-second group cooldown and 5-second global spacing.
-25. Test party, raid, and leader routes. Confirm an unavailable requested destination is suppressed without falling back, and `/pb dump` shows frozen broadcast state and pending groups without exposing player names in automatic messages.
+11. Run `/pb debugauras` while targeting or focusing the active boss. Confirm visible boss-frame debuffs have matching spell IDs, remaining times, and tracked group labels where applicable.
+12. Run `/pb dump`. Confirm the primary GUID, scan reason, candidate expiration source, and visible evaluations match the boss.
+13. Retest Magtheridon: a channeler may seed the provisional display, but Magtheridon must replace it when identified and CoE must remain active in that event tick.
+14. On a phase transition, verify an unrelated add cannot replace a previously visible boss and relevant activity can reclaim the known boss.
+15. End or wipe the encounter. Confirm the ticker stops and the frame hides without stale test or encounter rows.
+16. After combat, run `/pb snapshot` and `/pb dump`. Confirm both show `COMPLETED SNAPSHOT`, `active=no`, final raw candidates, final evaluations, and the retained last meaningful live evaluations. Reload once and confirm the snapshot remains available, then clear it with `/pb clear`.
+17. Run `/pb summary`. Confirm total duration, grace-excluded measured duration, frozen scope/mode, and per-enabled-group satisfied/partial/missing seconds and percentages.
+18. Verify Sunder partial-to-five-stack and Sunder-to-Expose handoffs produce the expected group totals without a false missing gap. Let a known-duration effect expire without a removal event and confirm missing time begins at expiration.
+19. Enable `/pb summary auto on`, complete or wipe an encounter, and confirm automatic output. Disable it afterward and verify `/pb clear` clears both the diagnostic snapshot and completed summary.
+20. On Opera Hall encounter `655`, run `/pb targets`. Confirm configured NPC IDs `17533` and `17534`, accepted Romulo/Julianne GUIDs, current primary, and selection reason.
+21. Apply a tracked debuff to each Opera boss. Confirm relevant activity can switch the single-primary display when no higher-priority visible target exists, both bosses retain independent candidates, and tracked effects on unregistered adds do not change the primary.
+22. Run `/pb roster` while solo, in a party, and in a raid. Confirm cached members/classes and group capabilities match the roster. Remove the only provider for a group, wait for `GROUP_ROSTER_UPDATE`, and verify its missing/grace row becomes `NOT AVAILABLE` without any repeated roster scanning during combat.
+23. Run `/pb broadcast` and confirm it is off by default. Configure a personal or global channel and delay, switch scopes, and verify both settings stores remain independent.
+24. Out of combat, run `/pb broadcast test` and confirm it prints a clearly marked local-only message. Run it during combat and confirm it is blocked.
+25. Enable broadcasts for a supervised pull. Verify a required, roster-available missing group alerts once after grace plus delay; optional, disabled, partial, `NOT AVAILABLE`, and unknown-capability groups do not alert. Apply the effect, remove it again, and verify re-alerting respects the 30-second group cooldown and 5-second global spacing.
+26. Test party, raid, and leader routes. Confirm an unavailable requested destination is suppressed without falling back, and `/pb dump` shows frozen broadcast state and pending groups without exposing player names in automatic messages.
 
 `/pb dump` metrics are cumulative for the current encounter. `cleu` counts accepted tracked aura events, `refreshes` counts display evaluations, `ticker` counts 0.2-second ticks, and `scans` is split by boss appearance, CLEU, and manual debug scans. A growing ticker count must not increase scan counts by itself.
 

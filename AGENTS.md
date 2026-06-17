@@ -117,6 +117,7 @@ Verify the TOC Interface against the installed TBC Anniversary client before rel
 
 - `/pb dump` prints current encounter identity, boss mappings, cumulative event/refresh/scan metrics, candidates, expiration sources, and visible evaluations.
 - `/pb debugscan` performs an explicit aura scan of mapped boss units only: visible `boss1`-`boss5`, plus exact-match `target`/`focus` for known fallback bosses.
+- `/pb debugauras` prints all harmful auras from the exact active boss unit only: visible boss units or exact-match `target`/`focus`. It must be read-only, must include spell IDs, and must not mutate candidates or scan arbitrary units.
 - `/pb validate` checks configured numeric spell IDs through client spell APIs. It is user-triggered debug work and must never run automatically in combat.
 - `/pb opacity 0.2-1.0` changes the persisted alpha of the whole frame; `/pb reset` restores opacity to `1.0` with position and scale.
 - `/pb mode problems|full` changes the persisted live encounter display mode. `/pb test` must remain deterministic and unfiltered.

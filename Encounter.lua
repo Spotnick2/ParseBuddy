@@ -408,10 +408,100 @@ function PB.Encounter:ResyncBossGUID(guid, reason, auraProvider, ignoredSpellId)
     return scanned, trackedCount, inspectedCount
 end
 
+function PB.Encounter:GetAuraDebugUnits(boss)
+    local units = {}
+    local seenTokens = {}
+    if not boss or not boss.guid then
+        return units
+    end
+
+    local function addUnit(unitToken, reason)
+        if unitToken and not seenTokens[unitToken] then
+            seenTokens[unitToken] = true
+            units[#units + 1] = {
+                unitToken = unitToken,
+                reason = reason,
+            }
+        end
+    end
+
+    if boss.visible and boss.unitToken then
+        addUnit(boss.unitToken, "visible-boss-unit")
+    end
+
+    local _, fallbackToken
+    for _, fallbackToken in ipairs(EXACT_SCAN_UNIT_TOKENS) do
+        local exists = not UnitExists or UnitExists(fallbackToken)
+        if exists and UnitGUID and UnitGUID(fallbackToken) == boss.guid then
+            addUnit(fallbackToken, "exact-guid-match")
+        end
+    end
+
+    return units
+end
+
 function PB.Encounter:RecordRelevantCLEU()
     if self.encounter and self.encounter.metrics then
         self.encounter.metrics.relevantCLEU = self.encounter.metrics.relevantCLEU + 1
     end
+end
+
+function PB.Encounter:DebugAuras(auraProvider)
+    if not self.active or not self.primaryVisibleBoss then
+        PB:Print("No active boss target is selected for aura diagnostics.")
+        return 0, 0
+    end
+
+    local boss = self.primaryVisibleBoss
+    local units = self:GetAuraDebugUnits(boss)
+    if #units == 0 then
+        PB:Print(string.format(
+            "No exact mapped unit for %s. Target or focus the active boss, then run /pb debugauras again.",
+            formatMaybe(boss.name)
+        ))
+        return 0, 0
+    end
+
+    local now = GetTime()
+    local scannedUnits = 0
+    local totalAuras = 0
+    local unitIndex
+    for unitIndex = 1, #units do
+        local unit = units[unitIndex]
+        local auras, inspectedCount = PB.State:GetUnitDebuffs(unit.unitToken, auraProvider)
+        scannedUnits = scannedUnits + 1
+        totalAuras = totalAuras + #auras
+        PB:Print(string.format(
+            "Boss auras on %s: boss=%s guid=%s reason=%s harmful=%d inspected=%d",
+            unit.unitToken,
+            formatMaybe(boss.name),
+            formatMaybe(boss.guid),
+            unit.reason,
+            #auras,
+            inspectedCount or #auras
+        ))
+
+        local auraIndex, aura
+        for auraIndex, aura in ipairs(auras) do
+            local remaining = "none"
+            if aura.expirationTime and aura.expirationTime > 0 then
+                remaining = string.format("%.1fs", math.max(0, aura.expirationTime - now))
+            end
+            local tracked = aura.spellId and PB.DebuffLibrary.spellIdToGroupKey[aura.spellId] or nil
+            PB:Print(string.format(
+                "  %02d spellId=%s name=%s stacks=%s remaining=%s source=%s tracked=%s",
+                aura.index or auraIndex,
+                formatMaybe(aura.spellId),
+                formatMaybe(aura.name),
+                formatMaybe(aura.stacks and aura.stacks > 0 and aura.stacks or nil),
+                remaining,
+                formatMaybe(aura.sourceName or aura.sourceUnit),
+                formatMaybe(tracked)
+            ))
+        end
+    end
+
+    return scannedUnits, totalAuras
 end
 
 function PB.Encounter:DebugScan(auraProvider)

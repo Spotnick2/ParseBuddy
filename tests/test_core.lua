@@ -16,6 +16,9 @@ ParseBuddy = {
         DebugScan = function(self)
             self.scans = self.scans + 1
         end,
+        DebugAuras = function(self)
+            self.auraDiagnostics = (self.auraDiagnostics or 0) + 1
+        end,
         PrintTargets = function(self) self.targets = (self.targets or 0) + 1 end,
     },
     UI = {
@@ -72,9 +75,12 @@ assertEqual(#ParseBuddy.messages, 0, "empty slash command no longer prints help"
 
 ParseBuddy:HandleSlashCommand("debugscan")
 assertEqual(ParseBuddy.Encounter.scans, 1, "debugscan slash command dispatches encounter scan")
+ParseBuddy:HandleSlashCommand("debugauras")
+assertEqual(ParseBuddy.Encounter.auraDiagnostics, 1, "debugauras slash command dispatches aura diagnostics")
 
 ParseBuddy:HandleSlashCommand("help")
 assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "debugscan", 1, true) ~= nil, true, "help lists debugscan")
+assertEqual(string.find(ParseBuddy.messages[#ParseBuddy.messages], "debugauras", 1, true) ~= nil, true, "help lists debugauras")
 
 ParseBuddy:HandleSlashCommand("validate")
 assertEqual(ParseBuddy.validations, 1, "validate slash command dispatches spell validation")

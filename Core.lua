@@ -10,7 +10,7 @@ local function trim(value)
 end
 
 local function showHelp()
-    PB:Print("Commands: /pb help, test, mode [problems|full], unavailable [show|hide], broadcast [on|off|channel|delay|test], profile [global|personal], groups, group <key> [enable|disable|required|optional], roster, targets, summary [auto on|off], dump, snapshot, clear, debugscan, validate, lock, unlock, reset, scale [0.6-1.4], opacity [0.2-1.0], debug")
+    PB:Print("Commands: /pb help, test, mode [problems|full], unavailable [show|hide], broadcast [on|off|channel|delay|test], profile [global|personal], groups, group <key> [enable|disable|required|optional], roster, targets, summary [auto on|off], dump, snapshot, clear, debugscan, debugauras, validate, lock, unlock, reset, scale [0.6-1.4], opacity [0.2-1.0], debug")
 end
 
 function PB:HandleSlashCommand(message)
@@ -67,6 +67,8 @@ function PB:HandleSlashCommand(message)
         PB:ClearSnapshot()
     elseif command == "debugscan" then
         PB.Encounter:DebugScan()
+    elseif command == "debugauras" then
+        PB.Encounter:DebugAuras()
     elseif command == "validate" then
         PB:ValidateSpellIds()
     elseif command == "debug" then

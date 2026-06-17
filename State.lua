@@ -44,6 +44,30 @@ local runtimeAuraProvider = {
     end,
 }
 
+local function readUnitDebuffs(unitToken, auraProvider)
+    auraProvider = auraProvider or runtimeAuraProvider
+    local auras = {}
+    local inspectedCount = 0
+    local index
+
+    for index = 1, MAX_BOSS_DEBUFFS do
+        local aura = auraProvider.GetDebuff(unitToken, index)
+        if not aura then
+            break
+        end
+
+        inspectedCount = inspectedCount + 1
+        aura.index = index
+        if aura.sourceUnit then
+            aura.sourceGUID = auraProvider.SourceGUID and auraProvider.SourceGUID(aura.sourceUnit) or nil
+            aura.sourceName = auraProvider.SourceName and auraProvider.SourceName(aura.sourceUnit) or nil
+        end
+        auras[#auras + 1] = aura
+    end
+
+    return auras, inspectedCount
+end
+
 local STATE_RANK = {
     activeKnown = 1,
     activeUnknown = 2,
@@ -222,6 +246,14 @@ function PB.State:ResetEncounter()
     self.candidatesByBoss = {}
 end
 
+function PB.State:GetUnitDebuffs(unitToken, auraProvider)
+    if not unitToken then
+        return {}, 0
+    end
+
+    return readUnitDebuffs(unitToken, auraProvider)
+end
+
 function PB.State:GetBossCandidates(bossGUID)
     local bossCandidates = self.candidatesByBoss[bossGUID]
     if not bossCandidates then
@@ -328,16 +360,11 @@ function PB.State:ResyncBossUnit(unitToken, bossGUID, auraProvider, now, preserv
     now = now or GetTime()
     local seenSpellIds = {}
     local trackedCount = 0
-    local inspectedCount = 0
     local index
+    local auras, inspectedCount = readUnitDebuffs(unitToken, auraProvider)
 
-    for index = 1, MAX_BOSS_DEBUFFS do
-        local aura = auraProvider.GetDebuff(unitToken, index)
-        if not aura then
-            break
-        end
-        inspectedCount = inspectedCount + 1
-
+    for index = 1, #auras do
+        local aura = auras[index]
         local groupKey = aura.spellId ~= ignoredSpellId
             and aura.spellId
             and PB.DebuffLibrary.spellIdToGroupKey[aura.spellId]

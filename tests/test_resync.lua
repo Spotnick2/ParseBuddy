@@ -46,6 +46,12 @@ assertEqual(candidate.expiresAt, 125, "scan uses client expiration")
 assertEqual(candidate.durationSource, "scan", "scan expiration source recorded")
 assertEqual(candidate.sourceName, "Tank", "late-load scan recovers source when available")
 
+local listedAuras, listedCount = State:GetUnitDebuffs("boss1", provider)
+assertEqual(listedCount, 2, "debug aura read inspects all harmful auras")
+assertEqual(#listedAuras, 2, "debug aura read returns tracked and untracked auras")
+assertEqual(listedAuras[1].sourceName, "Tank", "debug aura read resolves source name")
+assertEqual(listedAuras[2].spellId, 99999, "debug aura read preserves untracked spell ID")
+
 candidate.sourceName = "CLEU Tank"
 candidate.sourceGUID = "Player-CLEU"
 auras[1].sourceUnit = "raid2"
