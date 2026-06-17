@@ -13,6 +13,7 @@ PB.Encounter = {
 local BOSS_UNIT_COUNT = 5
 local GRACE_REFRESH_PADDING = 0.1
 local DISPLAY_REFRESH_INTERVAL = 0.2
+local EXACT_SCAN_UNIT_TOKENS = { "target", "focus" }
 local REMOVAL_BATCH_DELAY = 0.3
 
 local function appendLine(lines, value)
@@ -362,14 +363,29 @@ end
 
 function PB.Encounter:ResyncBossGUID(guid, reason, auraProvider, ignoredSpellId)
     local boss = self.encounteredBosses[guid]
-    if not boss or not boss.visible or not boss.unitToken then
+    if not boss then
+        return false, 0
+    end
+
+    local unitToken = boss.visible and boss.unitToken or nil
+    if not unitToken then
+        local _, fallbackToken
+        for _, fallbackToken in ipairs(EXACT_SCAN_UNIT_TOKENS) do
+            local exists = not UnitExists or UnitExists(fallbackToken)
+            if exists and UnitGUID and UnitGUID(fallbackToken) == guid then
+                unitToken = fallbackToken
+                break
+            end
+        end
+    end
+    if not unitToken then
         return false, 0
     end
 
     local now = GetTime()
     local preserveRecentSeconds = reason == "cleu" and DISPLAY_REFRESH_INTERVAL or nil
     local scanned, trackedCount, inspectedCount = PB.State:ResyncBossUnit(
-        boss.unitToken,
+        unitToken,
         guid,
         auraProvider,
         now,
@@ -379,6 +395,7 @@ function PB.Encounter:ResyncBossGUID(guid, reason, auraProvider, ignoredSpellId)
     if scanned then
         boss.lastScanAt = now
         boss.lastScanReason = reason
+        boss.lastScanUnitToken = unitToken
         boss.lastScanTrackedCount = trackedCount
         local metrics = self.encounter and self.encounter.metrics
         if metrics then
@@ -405,16 +422,29 @@ function PB.Encounter:DebugScan(auraProvider)
 
     local scannedBosses = 0
     local trackedAuras = 0
+    local scannedGUIDs = {}
     local _, boss
     for _, boss in ipairs(self.visibleOrder) do
         local scanned, trackedCount = self:ResyncBossGUID(boss.guid, "debugscan", auraProvider)
         if scanned then
+            scannedGUIDs[boss.guid] = true
             scannedBosses = scannedBosses + 1
             trackedAuras = trackedAuras + trackedCount
         end
     end
+    local guid
+    for guid, boss in pairs(self.encounteredBosses) do
+        if not scannedGUIDs[guid] then
+            local scanned, trackedCount = self:ResyncBossGUID(guid, "debugscan", auraProvider)
+            if scanned then
+                scannedGUIDs[guid] = true
+                scannedBosses = scannedBosses + 1
+                trackedAuras = trackedAuras + trackedCount
+            end
+        end
+    end
     self:RefreshDisplay(true)
-    PB:Print(string.format("Scanned %d visible boss unit(s); found %d tracked aura(s).", scannedBosses, trackedAuras))
+    PB:Print(string.format("Scanned %d mapped boss unit(s); found %d tracked aura(s).", scannedBosses, trackedAuras))
     return scannedBosses, trackedAuras
 end
 

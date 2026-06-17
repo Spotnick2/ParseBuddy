@@ -205,6 +205,16 @@ assertEqual(Encounter:LearnBossFromCombatLog("Creature-Y", "Hellfire Channeler")
 
 Encounter:RefreshVisibleBosses(emptyProvider)
 assertEqual(Encounter.primaryVisibleBoss.guid, "Creature-M", "combat-log fallback survives an empty boss scan")
+UnitExists = function(unitToken) return unitToken == "target" end
+UnitGUID = function(unitToken) return unitToken == "target" and "Creature-M" or nil end
+assertEqual(Encounter:ResyncBossGUID("Creature-M", "cleu"), true, "hidden fallback boss can resync from exact target GUID")
+assertEqual(ParseBuddy.State.lastScanUnit, "target", "exact target unit is used for hidden fallback scan")
+UnitGUID = function(unitToken) return unitToken == "target" and "Creature-Other" or nil end
+local scansBeforeNonMatch = ParseBuddy.State.scans
+assertEqual(Encounter:ResyncBossGUID("Creature-M", "cleu"), false, "nonmatching target GUID is not scanned")
+assertEqual(ParseBuddy.State.scans, scansBeforeNonMatch, "nonmatching target does not scan auras")
+UnitExists = function() return false end
+UnitGUID = function() return nil end
 
 Encounter:End(101, "Magtheridon", 4, 25, 1)
 Encounter:RefreshVisibleBosses(provider)

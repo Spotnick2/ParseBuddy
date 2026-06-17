@@ -18,7 +18,7 @@ Tagline: "Your wingman for cleaner raid parses."
 - Avoid per-frame scanning and raid-wide scans during combat.
 - Avoid expensive work inside `COMBAT_LOG_EVENT_UNFILTERED`.
 - Future CLEU handlers must return immediately unless the subevent is tracked, the numeric spell ID is tracked, and the destination GUID is an active boss GUID or can be learned as the encounter target when no visible boss unit is available.
-- Boss aura scans must be opportunistic only: encounter start, boss unit appearance, a relevant CLEU event, an explicit debug command, or test mode when appropriate. Combat-log fallback discovery is allowed when no visible boss unit is present.
+- Boss aura scans must be opportunistic only: encounter start, boss unit appearance, a relevant CLEU event, an explicit debug command, or test mode when appropriate. Combat-log fallback discovery is allowed when no visible boss unit is present. For fallback bosses without `boss1`-`boss5`, exact-match `target`/`focus` aura scans are allowed only when `UnitGUID` equals the known boss GUID.
 - Combat-log fallback discovery selects one provisional GUID per encounter. A later GUID whose localized destination name exactly matches the localized encounter name may replace that provisional target once; unrelated adds must not replace it.
 - A future 0.2-second ticker may update visible timers, colors, and row visibility only. It must not scan auras.
 - Track debuff groups rather than rendering every spell as a separate row.
@@ -116,7 +116,7 @@ Verify the TOC Interface against the installed TBC Anniversary client before rel
 ## MVP Diagnostic Commands
 
 - `/pb dump` prints current encounter identity, boss mappings, cumulative event/refresh/scan metrics, candidates, expiration sources, and visible evaluations.
-- `/pb debugscan` performs an explicit aura scan of currently visible boss units only.
+- `/pb debugscan` performs an explicit aura scan of mapped boss units only: visible `boss1`-`boss5`, plus exact-match `target`/`focus` for known fallback bosses.
 - `/pb validate` checks configured numeric spell IDs through client spell APIs. It is user-triggered debug work and must never run automatically in combat.
 - `/pb opacity 0.2-1.0` changes the persisted alpha of the whole frame; `/pb reset` restores opacity to `1.0` with position and scale.
 - `/pb mode problems|full` changes the persisted live encounter display mode. `/pb test` must remain deterministic and unfiltered.

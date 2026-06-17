@@ -15,4 +15,6 @@ The completed MVP implementation line is `0.1.7.0`. Follow-up acceptance fixes i
 
 `0.1.8.0` promotes the accepted static design to a live configuration panel wired to the existing global/personal settings, account-wide frame settings, summary/debug settings, and guarded diagnostic actions.
 
+`0.1.8.1` allows known fallback bosses without `boss1`-`boss5` mappings to opportunistically resync auras from exact-match `target` or `focus` units, fixing client-visible Judgements that were locally expired.
+
 `ParseBuddy.toc` is the authoritative version source. Lua code should read the version using addon metadata instead of maintaining a second constant.

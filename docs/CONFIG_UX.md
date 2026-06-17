@@ -121,6 +121,10 @@ Summary
 - Account-wide and personal values persist in their documented SavedVariables stores.
 - Existing explicit slash commands and panel controls remain behaviorally equivalent.
 
+## Related Runtime Diagnostic Note
+
+Hydross-style encounters may expose no `boss1`-`boss5` unit even while the player target frame shows the boss debuffs. Runtime aura recovery therefore permits exact-match `target`/`focus` scans for known fallback boss GUIDs. The configuration panel only displays the resulting settings and diagnostics; it does not perform those scans.
+
 ## Screenshot Review And Polish
 
 The first in-game prototype proved the API and layout architecture, but exposed several visual problems:

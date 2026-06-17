@@ -36,7 +36,7 @@ Equivalent effects will share one row. For example, Sunder Armor and Expose Armo
 
 ## Commands
 
-Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live debuff rows, known-duration expiration, and opportunistic visible-boss aura resync. Missing groups remain gray during the pull grace period and turn red afterward. Active effects update immediately from combat-log aura events. If the client does not expose `boss1` through `boss5`, ParseBuddy can learn a provisional non-friendly NPC target from the first tracked non-removal aura event. This includes neutral encounter targets such as Midnight while continuing to reject players, pets, guardians, and friendly NPCs. A later destination whose localized name exactly matches the encounter name can replace that provisional target. Previously visible or encounter-matched bosses take precedence over newly discovered adds and can reclaim the display from their combat-log activity. `/pb test` is blocked during active encounters so fake rows cannot replace live data.
+Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live debuff rows, known-duration expiration, and opportunistic visible-boss aura resync. Missing groups remain gray during the pull grace period and turn red afterward. Active effects update immediately from combat-log aura events. If the client does not expose `boss1` through `boss5`, ParseBuddy can learn a provisional non-friendly NPC target from the first tracked non-removal aura event. This includes neutral encounter targets such as Midnight while continuing to reject players, pets, guardians, and friendly NPCs. A later destination whose localized name exactly matches the encounter name can replace that provisional target. Previously visible or encounter-matched bosses take precedence over newly discovered adds and can reclaim the display from their combat-log activity. Known fallback bosses can also resync auras from `target` or `focus` only when the unit GUID exactly matches the boss GUID, which helps recover client-visible effects such as Judgement without broad scanning. `/pb test` is blocked during active encounters so fake rows cannot replace live data.
 
 - `/pb` or `/parsebuddy`: open the live configuration panel
 - `/pb help`: show help
@@ -67,7 +67,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - `/pb dump`: print explicitly labeled live diagnostics, or the completed snapshot when no encounter is active
 - `/pb snapshot`: print the automatically captured diagnostic snapshot from the most recently completed encounter
 - `/pb clear`: clear the in-memory and persisted diagnostic snapshot
-- `/pb debugscan`: rescan tracked debuffs on currently visible `boss1` through `boss5` units
+- `/pb debugscan`: rescan tracked debuffs on mapped boss units, including exact-match `target`/`focus` for fallback bosses
 - `/pb validate`: verify every configured spell ID with the current client spell APIs
 - Title-bar lock icon: toggle between movable and locked states
 - `/pb lock`: lock the frame position
