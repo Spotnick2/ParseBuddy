@@ -151,6 +151,7 @@ function PB.State:EvaluateGroup(group, candidates, options)
             group = group,
             state = "disabled",
             required = options.required,
+            visibility = options.visibility,
             sourceKnown = false,
         }
     end
@@ -181,6 +182,7 @@ function PB.State:EvaluateGroup(group, candidates, options)
             group = group,
             state = options.capability == "notAvailable" and "notAvailable" or "missing",
             required = options.required,
+            visibility = options.visibility,
             capability = options.capability or "unknown",
             recentCandidate = best and best.candidate or nil,
             sourceKnown = false,
@@ -191,6 +193,7 @@ function PB.State:EvaluateGroup(group, candidates, options)
         group = group,
         state = best.kind,
         required = options.required,
+        visibility = options.visibility,
         candidate = best.candidate,
         spell = best.spell,
         remaining = best.remaining,
@@ -208,6 +211,7 @@ function PB.State:EvaluateGroups(candidatesByGroup, optionsByGroup, sharedOption
             warningThreshold = groupOptions.warningThreshold or (sharedOptions and sharedOptions.warningThreshold) or 5,
             enabled = groupOptions.enabled,
             required = groupOptions.required,
+            visibility = groupOptions.visibility,
             capability = groupOptions.capability,
         }
         evaluations[index] = self:EvaluateGroup(group, candidatesByGroup and candidatesByGroup[group.key] or {}, options)
@@ -447,6 +451,7 @@ function PB.State:EvaluateBoss(bossGUID, now, warningThreshold, graceActive, set
             or PB.Config and PB.Config:GetGroupSettings(group.key) or {
             enabled = true,
             required = group.required,
+            visibility = group.visibility,
         }
         local evaluation = self:EvaluateGroup(
             group,
@@ -456,6 +461,7 @@ function PB.State:EvaluateBoss(bossGUID, now, warningThreshold, graceActive, set
                 warningThreshold = warningThreshold,
                 enabled = groupSettings.enabled,
                 required = groupSettings.required,
+                visibility = groupSettings.visibility or group.visibility or "always",
                 capability = PB.Roster and PB.Roster:GetGroupCapability(group.key) or "unknown",
             }
         )

@@ -16,6 +16,7 @@ local LOCKED_TEXTURE = "Interface\\Buttons\\LockButton-Locked-Up"
 local UNLOCKED_TEXTURE = "Interface\\Buttons\\LockButton-Unlocked-Up"
 local DISPLAY_MODE_PROBLEMS = "PROBLEMS_ONLY"
 local DISPLAY_MODE_FULL = "FULL_LIST"
+local VISIBILITY_APPLIED = "applied"
 
 local STATE_COLORS = {
     active = { 0.08, 0.42, 0.12, 0.92 },
@@ -310,6 +311,14 @@ end
 function PB.UI:IsEvaluationVisible(evaluation, displayMode, showUnavailable)
     if not evaluation or evaluation.state == "disabled" then
         return false
+    end
+
+    -- An applied-only group overrides both display modes. It exists to confirm a
+    -- debuff landed, never to report that one is absent, so it draws a row only
+    -- while the effect is actually on the boss.
+    if evaluation.visibility == VISIBILITY_APPLIED then
+        local state = evaluation.state
+        return state == "active" or state == "expiring" or state == "partial"
     end
 
     if displayMode == DISPLAY_MODE_FULL then

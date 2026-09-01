@@ -49,6 +49,15 @@ function PB.ConfigPanelModel:Refresh()
         local groupState = state.groups[group.key] or {}
         groupState.enabled = groupSettings.enabled == true
         groupState.required = groupSettings.required == true
+        if not groupState.enabled then
+            groupState.mode = "off"
+        elseif groupSettings.visibility == "applied" then
+            groupState.mode = "applied"
+        else
+            groupState.mode = "always"
+        end
+        -- The alert flag only means anything for a group that reports absence.
+        groupState.requiredEnabled = groupState.mode == "always"
         local capability = PB.Roster and PB.Roster:GetGroupCapability(group.key) or "unknown"
         groupState.availability = AVAILABILITY_TEXT[capability] or "Unknown"
         state.groups[group.key] = groupState
@@ -112,6 +121,35 @@ end
 function PB.ConfigPanelModel:ResetPosition()
     PB.UI:ResetPosition(true)
     self:NotifyChanged()
+end
+
+local GROUP_MODES = {
+    off = true,
+    applied = true,
+    always = true,
+}
+
+-- One atomic transition per click. Writing `enabled` and `visibility` through
+-- SetGroupValue separately would publish an intermediate state and refresh the
+-- encounter twice.
+function PB.ConfigPanelModel:SetGroupMode(groupKey, mode)
+    if not GROUP_MODES[mode] then return false end
+    local settings = PB.Config:GetGroupSettings(groupKey)
+    if not settings then return false end
+    if mode == "off" then
+        -- Leave visibility alone so re-enabling restores the previous tier.
+        settings.enabled = false
+    elseif mode == "applied" then
+        settings.enabled = true
+        settings.visibility = "applied"
+        settings.required = false
+    else
+        settings.enabled = true
+        settings.visibility = "always"
+    end
+    refreshEncounter()
+    self:NotifyChanged()
+    return true
 end
 
 function PB.ConfigPanelModel:SetGroupValue(groupKey, key, value)

@@ -15,12 +15,34 @@ local function requiredText(value)
     return value and "required" or "optional"
 end
 
+local function visibilityText(value)
+    return value == "applied" and "show if applied" or "always show"
+end
+
+-- `visibility` postdates the original group settings. A stored group entry that
+-- predates it already carries the user's intent in `required`, so derive from
+-- that instead of letting the new shipped defaults overwrite a deliberate
+-- choice. A fresh install has no group entries at this point and so takes the
+-- shipped defaults untouched.
+local function deriveGroupVisibility(settings)
+    if type(settings) ~= "table" or type(settings.groups) ~= "table" then
+        return
+    end
+    local _, groupSettings
+    for _, groupSettings in pairs(settings.groups) do
+        if type(groupSettings) == "table" and groupSettings.visibility == nil then
+            groupSettings.visibility = groupSettings.required ~= false and "always" or "applied"
+        end
+    end
+end
+
 function PB.Config:Initialize()
     ParseBuddyDB.schemaVersion = 4
     ParseBuddyDB.settings = ParseBuddyDB.settings or {}
     if ParseBuddyDB.settings.displayMode == nil and ParseBuddyDB.displayMode ~= nil then
         ParseBuddyDB.settings.displayMode = ParseBuddyDB.displayMode
     end
+    deriveGroupVisibility(ParseBuddyDB.settings)
     PB.Defaults:ApplySettings(ParseBuddyDB.settings)
 
     ParseBuddyCharDB = ParseBuddyCharDB or {}
@@ -29,6 +51,7 @@ function PB.Config:Initialize()
         ParseBuddyCharDB.activeScope = "global"
     end
     if ParseBuddyCharDB.settings then
+        deriveGroupVisibility(ParseBuddyCharDB.settings)
         PB.Defaults:ApplySettings(ParseBuddyCharDB.settings)
     end
 end
@@ -156,8 +179,16 @@ function PB.Config:GetGroupSettings(groupKey)
     local settings = self:GetSettings()
     local groupSettings = settings.groups[groupKey]
     if not groupSettings then
-        groupSettings = { enabled = true, required = true }
+        local shipped = PB.Defaults.settings.groups[groupKey]
+        groupSettings = {
+            enabled = true,
+            visibility = shipped and shipped.visibility or "always",
+            required = shipped == nil or shipped.required ~= false,
+        }
         settings.groups[groupKey] = groupSettings
+    end
+    if groupSettings.visibility == nil then
+        groupSettings.visibility = groupSettings.required ~= false and "always" or "applied"
     end
     return groupSettings
 end
@@ -166,10 +197,11 @@ function PB.Config:PrintGroup(groupKey)
     local group = PB.DebuffLibrary.groupsByKey[groupKey]
     local settings = self:GetGroupSettings(groupKey)
     PB:Print(string.format(
-        "Group %s (%s): %s, %s, scope=%s.",
+        "Group %s (%s): %s, %s, %s, scope=%s.",
         groupKey,
         group.label,
         boolText(settings.enabled),
+        visibilityText(settings.visibility),
         requiredText(settings.required),
         self:GetScope()
     ))
@@ -185,7 +217,16 @@ function PB.Config:HandleGroupCommand(argument)
 
     action = action and action:lower() or ""
     local settings = self:GetGroupSettings(groupKey)
-    if action == "enable" then
+    if action == "always" then
+        settings.enabled = true
+        settings.visibility = "always"
+    elseif action == "applied" then
+        settings.enabled = true
+        settings.visibility = "applied"
+        settings.required = false
+    elseif action == "enable" then
+        -- Legacy verb: turn tracking back on without disturbing a deliberate
+        -- applied-only choice.
         settings.enabled = true
     elseif action == "disable" then
         settings.enabled = false
@@ -194,7 +235,7 @@ function PB.Config:HandleGroupCommand(argument)
     elseif action == "optional" then
         settings.required = false
     elseif action ~= "" then
-        PB:Print("Group action must be enable, disable, required, or optional.")
+        PB:Print("Group action must be always, applied, disable, required, or optional.")
         return false
     end
 

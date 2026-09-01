@@ -151,6 +151,35 @@ assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("active", true, true, "
 assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("notAvailable", true, false, "Unavailable"), "PROBLEMS_ONLY", false), false, "unavailable row hidden by default in problems mode")
 assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("notAvailable", false, false, "Unavailable"), "PROBLEMS_ONLY", true), true, "scoped setting shows unavailable row in problems mode")
 assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("notAvailable", true, false, "Unavailable"), "FULL_LIST", false), true, "full mode always shows unavailable row")
+-- Applied-only groups override both display modes: they confirm a debuff landed
+-- and never report one absent.
+local function appliedEvaluation(state, sourceKnown)
+    local built = evaluation(state, false, sourceKnown, "Applied")
+    built.visibility = "applied"
+    return built
+end
+
+local IS_VISIBLE = ParseBuddy.UI.IsEvaluationVisible
+local _, mode
+for _, mode in ipairs({ "PROBLEMS_ONLY", "FULL_LIST" }) do
+    assertEqual(IS_VISIBLE(ParseBuddy.UI, appliedEvaluation("active", true), mode, true), true,
+        "applied-only healthy row shown in " .. mode)
+    assertEqual(IS_VISIBLE(ParseBuddy.UI, appliedEvaluation("expiring", true), mode, true), true,
+        "applied-only expiring row shown in " .. mode)
+    assertEqual(IS_VISIBLE(ParseBuddy.UI, appliedEvaluation("partial", true), mode, true), true,
+        "applied-only partial row shown in " .. mode)
+    assertEqual(IS_VISIBLE(ParseBuddy.UI, appliedEvaluation("missing", false), mode, true), false,
+        "applied-only missing row hidden in " .. mode)
+    assertEqual(IS_VISIBLE(ParseBuddy.UI, appliedEvaluation("grace", false), mode, true), false,
+        "applied-only grace row hidden in " .. mode)
+    assertEqual(IS_VISIBLE(ParseBuddy.UI, appliedEvaluation("notAvailable", false), mode, true), false,
+        "applied-only unavailable row hidden in " .. mode)
+end
+local disabledApplied = appliedEvaluation("active", true)
+disabledApplied.state = "disabled"
+assertEqual(IS_VISIBLE(ParseBuddy.UI, disabledApplied, "FULL_LIST", true), false,
+    "disabled still wins over applied-only visibility")
+
 local unavailableRow = ParseBuddy.UI:EvaluationToRowData(evaluation("notAvailable", true, false, "Unavailable"))
 assertEqual(unavailableRow.status, "NOT AVAILABLE", "unavailable evaluation uses explicit status")
 assertEqual(unavailableRow.state, "notAvailable", "unavailable evaluation uses gray display state")

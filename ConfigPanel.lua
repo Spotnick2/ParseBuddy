@@ -405,9 +405,9 @@ function PB.ConfigPanel:Build(panel)
     y = y - 48
     _, y = addSection(content, y, "Debuff Groups")
     addText(content, "Group", "GameFontNormal", LEFT, y)
-    addText(content, "Enabled", "GameFontNormal", 300, y)
-    addText(content, "Required", "GameFontNormal", 390, y)
-    addText(content, "Availability", "GameFontNormal", 500, y)
+    addText(content, "Show", "GameFontNormal", 214, y)
+    addText(content, "Alert", "GameFontNormal", 418, y)
+    addText(content, "Availability", "GameFontNormal", 470, y)
     y = y - 24
     local _, group
     local groupIndex = 0
@@ -423,13 +423,23 @@ function PB.ConfigPanel:Build(panel)
         else
             rowBackground:SetColorTexture(0.06, 0.06, 0.08, 0.28)
         end
-        addText(content, group.label, "GameFontHighlight", LEFT, y - 3, 270)
-        local enabledCheckbox = addCheckbox(content, "", 304, y + 2, function() return groupState.enabled end, function(value) model:SetGroupValue(groupKey, "enabled", value) end)
-        local requiredCheckbox = addCheckbox(content, "", 402, y + 2, function() return groupState.required end, function(value) model:SetGroupValue(groupKey, "required", value) end)
-        local availability = addText(content, groupState.availability, "GameFontHighlightSmall", 500, y - 3)
+        addText(content, group.label, "GameFontHighlight", LEFT, y - 3, 190)
+        local _, refreshMode = addChoice(content, {
+            { label = "Off", value = "off", width = 42, tooltip = "Do not track this effect." },
+            { label = "If applied", value = "applied", width = 74, tooltip = "Show a row only while the effect is on the boss." },
+            { label = "Always", value = "always", width = 64, tooltip = "Also show a row when the effect is missing." },
+        }, 214, y + 1, function() return groupState.mode end, function(value) model:SetGroupMode(groupKey, value) end)
+        local requiredCheckbox = addCheckbox(content, "", 420, y + 2, function() return groupState.required end, function(value) model:SetGroupValue(groupKey, "required", value) end)
+        local availability = addText(content, groupState.availability, "GameFontHighlightSmall", 470, y - 3)
         registerRefresh(function()
-            enabledCheckbox:RefreshValue()
+            refreshMode()
             requiredCheckbox:RefreshValue()
+            -- Alerting is meaningless for a group that never reports absence.
+            if groupState.requiredEnabled then
+                if requiredCheckbox.Enable then requiredCheckbox:Enable() end
+            elseif requiredCheckbox.Disable then
+                requiredCheckbox:Disable()
+            end
             availability:SetText(groupState.availability)
             local availabilityColor = PB.ConfigPanel:GetAvailabilityStyle(groupState.availability)
             availability:SetTextColor(availabilityColor[1], availabilityColor[2], availabilityColor[3], availabilityColor[4])

@@ -35,6 +35,8 @@ function PB.Summary:Begin(encounter)
                 key = group.key,
                 label = group.label,
                 required = groupSettings.required ~= false,
+                visibility = groupSettings.visibility or "always",
+                observed = false,
                 current = "missing",
                 lastAt = encounter.startedAt,
                 satisfied = 0,
@@ -108,6 +110,9 @@ function PB.Summary:Observe(now, bossGUID)
         local group = active.groups[evaluation.group.key]
         if group then
             group.current = summaryState(evaluation)
+            if group.current ~= "missing" then
+                group.observed = true
+            end
         end
     end
     return true
@@ -138,7 +143,7 @@ function PB.Summary:Finalize(endedAt, success)
     local _, libraryGroup
     for _, libraryGroup in ipairs(PB.DebuffLibrary.groups) do
         local group = active.groups[libraryGroup.key]
-        if group then
+        if group and (group.observed or group.visibility ~= "applied") then
             summary.groups[#summary.groups + 1] = {
                 key = group.key,
                 label = group.label,

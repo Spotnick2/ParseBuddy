@@ -46,7 +46,10 @@ function PB.Broadcast:Begin(encounter)
             label = group.label,
             missingText = group.missingText,
             enabled = groupSettings and groupSettings.enabled == true,
-            required = groupSettings and groupSettings.required ~= false,
+            -- An applied-only group never reports a missing row, so it must not
+            -- announce one in chat either, whatever the alert flag says.
+            required = groupSettings and groupSettings.required ~= false
+                and groupSettings.visibility ~= "applied",
             capability = PB.Roster and PB.Roster:GetGroupCapability(group.key) or "unknown",
             announced = false,
             missingActive = false,

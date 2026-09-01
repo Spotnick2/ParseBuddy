@@ -31,13 +31,13 @@ PB.Defaults.settings = {
         delay = 3,
     },
     groups = {
-        spellVulnerability = { enabled = true, required = true },
-        majorArmor = { enabled = true, required = true },
-        faerieFire = { enabled = true, required = true },
-        judgement = { enabled = true, required = true },
-        attackPower = { enabled = true, required = true },
-        attackSpeed = { enabled = true, required = true },
-        recklessness = { enabled = true, required = false },
+        spellVulnerability = { enabled = true, visibility = "always", required = true },
+        majorArmor = { enabled = true, visibility = "always", required = true },
+        faerieFire = { enabled = true, visibility = "always", required = true },
+        judgement = { enabled = true, visibility = "always", required = true },
+        attackPower = { enabled = true, visibility = "always", required = true },
+        attackSpeed = { enabled = true, visibility = "applied", required = false },
+        recklessness = { enabled = true, visibility = "applied", required = false },
     },
 }
 

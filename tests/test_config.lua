@@ -40,6 +40,26 @@ assertEqual(Config:GetGroupSettings("recklessness").enabled, true, "recklessness
 assertEqual(Config:GetGroupSettings("recklessness").required, false, "recklessness optional by default")
 assertEqual(Config:GetGroupSettings("majorArmor").required, true, "core groups required by default")
 assertEqual(ParseBuddyCharDB.settings, nil, "personal settings are lazy")
+assertEqual(Config:GetGroupSettings("attackSpeed").visibility, "applied", "thunder clap ships as applied-only")
+assertEqual(Config:GetGroupSettings("attackSpeed").required, false, "applied-only groups do not alert by default")
+assertEqual(Config:GetGroupSettings("majorArmor").visibility, "always", "core groups ship as always-shown")
+
+local appliedGroup = Config:GetGroupSettings("attackSpeed")
+Config:HandleGroupCommand("attackSpeed always")
+assertEqual(appliedGroup.visibility, "always", "always verb promotes an applied-only group")
+assertEqual(appliedGroup.enabled, true, "always verb also turns tracking on")
+Config:HandleGroupCommand("attackSpeed required")
+assertEqual(appliedGroup.required, true, "required verb still sets the alert flag")
+Config:HandleGroupCommand("attackSpeed applied")
+assertEqual(appliedGroup.visibility, "applied", "applied verb demotes the group")
+assertEqual(appliedGroup.required, false, "applied verb clears the alert flag")
+Config:HandleGroupCommand("attackSpeed disable")
+assertEqual(appliedGroup.enabled, false, "disable verb stops tracking")
+assertEqual(appliedGroup.visibility, "applied", "disable preserves the chosen tier")
+Config:HandleGroupCommand("attackSpeed enable")
+assertEqual(appliedGroup.enabled, true, "legacy enable verb resumes tracking")
+assertEqual(appliedGroup.visibility, "applied", "legacy enable verb does not override a deliberate tier")
+Config:HandleGroupCommand("attackSpeed applied")
 
 Config:SetScope("personal")
 assertEqual(Config:GetScope(), "personal", "personal scope selected")
@@ -98,5 +118,47 @@ assertEqual(Config:HandleBroadcastCommand("delay 61"), false, "invalid broadcast
 local messageCount = #ParseBuddy.messages
 Config:PrintGroups()
 assertEqual(#ParseBuddy.messages, messageCount + 7, "groups command prints every stable group key")
+
+-- Upgrading an existing install: `visibility` postdates these settings, so it is
+-- derived from the intent already stored in `required` rather than taken from
+-- the new shipped defaults.
+ParseBuddyDB = {
+    schemaVersion = 4,
+    settings = {
+        groups = {
+            attackSpeed = { enabled = true, required = true },
+            recklessness = { enabled = true, required = false },
+        },
+    },
+}
+ParseBuddyCharDB = {
+    schemaVersion = 3,
+    activeScope = "global",
+    settings = {
+        groups = {
+            attackSpeed = { enabled = true, required = true },
+        },
+    },
+}
+Config:Initialize()
+assertEqual(ParseBuddyDB.settings.groups.attackSpeed.visibility, "always",
+    "an upgraded required group keeps reporting absence")
+assertEqual(ParseBuddyDB.settings.groups.attackSpeed.required, true,
+    "upgrading does not clear a deliberate alert flag")
+assertEqual(ParseBuddyDB.settings.groups.recklessness.visibility, "applied",
+    "an upgraded optional group becomes applied-only")
+assertEqual(ParseBuddyCharDB.settings.groups.attackSpeed.visibility, "always",
+    "personal settings are derived independently of the account store")
+assertEqual(ParseBuddyDB.settings.groups.majorArmor.visibility, "always",
+    "groups absent from the upgraded store still take shipped defaults")
+
+-- A fresh install has no group entries to derive from, so it takes the defaults.
+ParseBuddyDB = {}
+ParseBuddyCharDB = nil
+Config:Initialize()
+assertEqual(ParseBuddyDB.settings.groups.attackSpeed.visibility, "applied",
+    "a fresh install ships thunder clap as applied-only")
+assertEqual(ParseBuddyDB.settings.groups.majorArmor.visibility, "always",
+    "a fresh install ships core groups as always-shown")
 
 print("ParseBuddy Config tests passed: " .. testsRun)
