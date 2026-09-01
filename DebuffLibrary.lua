@@ -7,6 +7,7 @@ PB.DebuffLibrary = {
             label = "Spell Vulnerability",
             missingText = "CoE / CoS",
             required = true,
+            visibility = "always",
             mode = "any",
             spells = {
                 { displayName = "CoE", spellIds = { 1490, 11721, 11722, 27228 }, duration = 300 },
@@ -18,6 +19,7 @@ PB.DebuffLibrary = {
             label = "Armor",
             missingText = "Sunder / Expose",
             required = true,
+            visibility = "always",
             mode = "any",
             spells = {
                 { displayName = "Sunder", spellIds = { 7386, 7405, 8380, 11596, 11597, 25225 }, requiredStacks = 5, duration = 30 },
@@ -29,6 +31,7 @@ PB.DebuffLibrary = {
             label = "Faerie Fire",
             missingText = "Faerie Fire",
             required = true,
+            visibility = "always",
             mode = "any",
             spells = {
                 { displayName = "Faerie Fire", spellIds = { 770, 778, 9749, 9907, 26993 }, duration = 40 },
@@ -40,6 +43,7 @@ PB.DebuffLibrary = {
             label = "Judgement",
             missingText = "Wisdom / Light",
             required = true,
+            visibility = "always",
             mode = "any",
             spells = {
                 { displayName = "Wisdom", spellIds = { 20186, 20354, 20355, 27164 }, duration = 20 },
@@ -51,6 +55,7 @@ PB.DebuffLibrary = {
             label = "Attack Power",
             missingText = "Demo Shout / Roar",
             required = true,
+            visibility = "always",
             mode = "any",
             spells = {
                 { displayName = "Demo Shout", spellIds = { 1160, 6190, 11554, 11555, 11556, 25203 }, duration = 30 },
@@ -61,7 +66,8 @@ PB.DebuffLibrary = {
             key = "attackSpeed",
             label = "Attack Speed",
             missingText = "Thunder Clap",
-            required = true,
+            required = false,
+            visibility = "applied",
             mode = "any",
             spells = {
                 { displayName = "Thunder Clap", spellIds = { 6343, 8198, 8204, 8205, 11580, 11581, 25264 }, duration = 30 },
@@ -71,7 +77,8 @@ PB.DebuffLibrary = {
             key = "recklessness",
             label = "Armor Support",
             missingText = "Curse of Recklessness",
-            required = true,
+            required = false,
+            visibility = "applied",
             mode = "any",
             spells = {
                 { displayName = "Recklessness", spellIds = { 704, 7658, 7659, 11717, 27226 }, duration = 120 },
@@ -81,6 +88,7 @@ PB.DebuffLibrary = {
     groupsByKey = {},
     spellIdToGroupKey = {},
     spellsById = {},
+    duplicateSpellIds = {},
 }
 
 function PB.DebuffLibrary:BuildLookups()
@@ -94,6 +102,13 @@ function PB.DebuffLibrary:BuildLookups()
 
             local idIndex
             for idIndex, spellId in ipairs(spell.spellIds) do
+                -- These maps are flat and last-writer-wins, and EvaluateGroup
+                -- gates on spellIdToGroupKey matching the group it is scoring.
+                -- A duplicate would silently hide the spell from whichever group
+                -- registered it first, so record the collision for the tests.
+                if self.spellIdToGroupKey[spellId] ~= nil then
+                    self.duplicateSpellIds[#self.duplicateSpellIds + 1] = spellId
+                end
                 self.spellIdToGroupKey[spellId] = group.key
                 self.spellsById[spellId] = spell
             end

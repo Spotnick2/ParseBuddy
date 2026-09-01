@@ -6,7 +6,7 @@ ParseBuddy is an MVP World of Warcraft addon for TBC Anniversary. The implementa
 
 The AddOns settings entry is live. Changes apply immediately through the same global/personal settings and guarded actions used by slash commands; there is no Save or Apply workflow.
 
-The settings panel uses explicit selected segments, visible custom sliders, compact alternating group rows, one Required checkbox per group, colored availability, readable disabled controls, a dark reading surface, a visible scrollbar, and a secondary Diagnostics disclosure row.
+The settings panel uses explicit selected segments, visible custom sliders, compact alternating group rows, an Off/If applied/Always visibility control and one Alert checkbox per group, colored availability, readable disabled controls, a dark reading surface, a visible scrollbar, and a secondary Diagnostics disclosure row.
 
 All standalone segmented actions initialize with the same neutral styling as unselected choices; they do not depend on a later interaction to become readable.
 
@@ -57,8 +57,11 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - `/pb profile personal`: use this character's settings; the first selection copies current global settings
 - `/pb groups`: list every stable group key and its active-scope settings
 - `/pb group <key>`: show one group's active-scope settings
-- `/pb group <key> enable|disable`: change whether a group is evaluated and displayed
-- `/pb group <key> required|optional`: change whether missing/grace is a problem in Problems Only
+- `/pb group <key> always`: track the group and report it both when present and when missing
+- `/pb group <key> applied`: track the group but draw a row only while the effect is on the boss
+- `/pb group <key> disable`: stop evaluating and displaying a group; the chosen tier is preserved
+- `/pb group <key> enable`: resume tracking without overriding a deliberate tier
+- `/pb group <key> required|optional`: change whether an `always` group may alert and whether missing/grace is a problem in Problems Only
 - `/pb summary`: print the most recently completed encounter's in-memory uptime summary
 - `/pb summary auto on`: automatically print the summary when an encounter ends
 - `/pb summary auto off`: disable automatic summary output; this is the account-wide default
@@ -102,7 +105,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 ## Not Yet Implemented
 
 - Named profiles beyond the implemented global account scope and personal per-character scope
-- Additional optional debuff groups beyond Curse of Recklessness and boss-specific profiles
+- Boss-specific profiles
 - Multi-boss display sections
 - Sounds, raid-warning output, assignments, and import/export
 - Multiple simultaneous boss UI sections, multi-boss uptime aggregation, and a graphical summary window
@@ -120,7 +123,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - Frame lock, scale, opacity, and reset update account-wide frame settings immediately.
 - Alert destination/delay/test controls visibly disable while alerts are off, and Diagnostics starts collapsed.
 - Selected scope/mode/destination choices are visually distinct from unselected choices. Scale, opacity, and delay sliders show a track, fill, thumb, and numeric value.
-- Group rows are compact and aligned; Required checked means required, unchecked means optional. Availability is green, gray, or yellow for Available, Not Available, or Unknown.
+- Group rows are compact and aligned. The Show control selects Off, If applied, or Always; the Alert checkbox applies only to Always groups and is disabled otherwise. Availability is green, gray, or yellow for Available, Not Available, or Unknown.
 - `/pb test` shows seven deterministic green, yellow, red, and gray preview rows.
 - The frame can be dragged while unlocked.
 - The title-bar lock icon changes between locked and unlocked images and toggles dragging; `/pb lock` and `/pb unlock` provide the same behavior.
@@ -131,13 +134,14 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - The close button hides the test frame.
 - `/pb test` renders all seven monitored groups from deterministic evaluator state.
 - Problems Only is the persisted default and hides healthy active rows while showing required missing/grace, partial, expiring, and unknown-source rows.
-- Full List shows every enabled group, including healthy active rows.
+- Full List shows every enabled `always` group, including healthy active rows.
+- An `applied` group ignores the display mode. It draws a row only while the effect is on the boss and never reports it missing, so situational effects stay out of the way until someone actually provides them.
 - Roster availability is cached only on entering the world, roster changes, and encounter start. CLEU, the display ticker, and UI rendering never scan the roster.
 - Missing or grace rows become gray `NOT AVAILABLE` when a complete cached roster has no baseline provider class. Incomplete roster information remains `unknown` and preserves normal missing/grace behavior.
 - Active, partial, and expiring rows remain authoritative regardless of cached capability. ParseBuddy does not infer talents, specs, learned ranks, assignments, or player responsibility.
 - Problems Only hides `NOT AVAILABLE` by default; `/pb unavailable show|hide` is scoped with global/personal settings. Full List always shows enabled unavailable rows.
-- Broadcast settings are global/personal scoped and frozen at pull. They default off and apply only to enabled, required groups whose frozen roster capability is `available`.
-- Broadcasts wait for pull grace plus the configured delay, announce once per missing period, and re-arm only after the group becomes active or expiring. Partial, optional, disabled, unavailable, unknown-roster, grace, active, and expiring rows never alert.
+- Broadcast settings are global/personal scoped and frozen at pull. They default off and apply only to enabled, `always`, required groups whose frozen roster capability is `available`.
+- Broadcasts wait for pull grace plus the configured delay, announce once per missing period, and re-arm only after the group becomes active or expiring. Partial, optional, applied-only, disabled, unavailable, unknown-roster, grace, active, and expiring rows never alert.
 - Party, raid, and cached-leader routes never fall back to another channel. Unavailable routes are suppressed with conditional local debug output. Automatic messages contain group/effect text only, not roster member names.
 - The display ticker and CLEU path never send chat. State-changing evaluations schedule a separate deferred callback, with a 30-second per-group cooldown and 5-second global spacing.
 - `/pb mode problems` and `/pb mode full` switch immediately during an encounter and persist after `/reload`.
