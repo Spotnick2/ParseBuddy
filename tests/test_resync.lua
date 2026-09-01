@@ -61,9 +61,12 @@ assertEqual(candidate.sourceGUID, "Player-CLEU", "scan preserves CLEU source GUI
 
 auras = {}
 State:ResyncBossUnit("boss1", "Boss-A", provider, 110)
-assertEqual(candidate.active, false, "complete scan marks absent tracked aura inactive")
-assertEqual(candidate.removedAt, 110, "scan records inferred removal time")
-assertEqual(candidate.lastScannedAt, 110, "scan timestamp retained")
+assertEqual(candidate.active, true, "scan absence cannot clear a running client expiration")
+assertEqual(candidate.removedAt, nil, "no removal is inferred while the expiration runs")
+State:ResyncBossUnit("boss1", "Boss-A", provider, 126)
+assertEqual(candidate.active, false, "absent tracked aura clears once its expiration lapses")
+assertEqual(candidate.removedAt, 126, "scan records inferred removal time")
+assertEqual(candidate.lastScannedAt, 126, "scan timestamp retained")
 
 auras = {
     {
@@ -133,6 +136,36 @@ State:HandleAuraEvent({
 })
 State:ResyncBossUnit("boss1", "Boss-Roar", provider, 416, 0.2)
 assertEqual(roar.active, false, "combat log removal still takes the roar down")
+
+-- Expose Armor has no static duration in the library, so its only expiration
+-- comes from the client during a scan. A later truncated scan must respect it.
+State:HandleAuraEvent({
+    observedAt = 500,
+    subevent = "SPELL_AURA_APPLIED",
+    sourceName = "Rogue",
+    sourceGUID = "Player-Rogue",
+    destGUID = "Boss-Expose",
+    spellId = 26866,
+    spellName = "Expose Armor",
+})
+local exposed = State.candidatesByBoss["Boss-Expose"].majorArmor[26866]
+assertEqual(exposed.expiresAt, nil, "no static duration is invented for Expose Armor")
+auras = {
+    {
+        name = "Expose Armor",
+        stacks = 1,
+        expirationTime = 530,
+        sourceUnit = "raid1",
+        spellId = 26866,
+    },
+}
+State:ResyncBossUnit("boss1", "Boss-Expose", provider, 501, 0.2)
+assertEqual(exposed.expiresAt, 530, "scan supplies the client expiration for Expose Armor")
+auras = {}
+State:ResyncBossUnit("boss1", "Boss-Expose", provider, 502, 0.2)
+assertEqual(exposed.active, true, "truncated scan respects a scan-provided expiration")
+State:ResyncBossUnit("boss1", "Boss-Expose", provider, 531, 0.2)
+assertEqual(exposed.active, false, "Expose Armor clears once its client expiration lapses")
 
 State:HandleAuraEvent({
     observedAt = 300,

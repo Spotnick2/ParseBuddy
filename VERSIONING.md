@@ -19,6 +19,6 @@ The completed MVP implementation line is `0.1.7.0`. Follow-up acceptance fixes i
 
 `0.1.8.2` adds `/pb debugauras`, a read-only exact-boss target/focus diagnostic that prints all harmful aura names, spell IDs, remaining times, sources, and tracked group labels without mutating encounter state.
 
-`0.1.8.3` stops a boss aura scan from clearing a debuff the combat log still vouches for. The client truncates a heavily debuffed boss's harmful aura list, so a scan that cannot see an aura carried no information; short, rarely recast debuffs such as Demoralizing Roar were marked missing within a fraction of a second of landing and never recovered.
+`0.1.8.3` stops a boss aura scan from clearing a debuff whose known expiration is still running, whether that expiration came from the combat log or from the client's own reported expiration. The client truncates a heavily debuffed boss's harmful aura list, so a scan that cannot see an aura carries no information. Short, rarely recast debuffs such as Demoralizing Roar were marked missing within a fraction of a second of landing and never recovered, and variable-duration debuffs such as Expose Armor were cleared mid-duration. Removal stays with `SPELL_AURA_REMOVED` and natural expiry.
 
 `ParseBuddy.toc` is the authoritative version source. Lua code should read the version using addon metadata instead of maintaining a second constant.
