@@ -92,7 +92,47 @@ State:ResyncBossUnit("boss1", "Boss-Race", provider, 200, 0.2)
 local recent = State.candidatesByBoss["Boss-Race"].faerieFire[26993]
 assertEqual(recent.active, true, "same-frame CLEU candidate survives a lagging aura scan")
 State:ResyncBossUnit("boss1", "Boss-Race", provider, 200.3, 0.2)
-assertEqual(recent.active, false, "later complete scan can clear absent CLEU candidate")
+assertEqual(recent.active, true, "scan cannot clear an aura the combat log still vouches for")
+State:ResyncBossUnit("boss1", "Boss-Race", provider, 241, 0.2)
+assertEqual(recent.active, false, "scan clears the candidate once its CLEU duration lapses")
+assertEqual(recent.removedAt, 241, "scan records inferred removal after the CLEU vouch ends")
+
+-- A rarely recast debuff (Demoralizing Roar) must survive scans that cannot see
+-- it: the client truncates the harmful aura list on a heavily debuffed boss, and
+-- unlike Demo Shout nothing recasts the roar to bring it back.
+State:HandleAuraEvent({
+    observedAt = 400,
+    subevent = "SPELL_AURA_APPLIED",
+    sourceName = "Bear",
+    sourceGUID = "Player-Bear",
+    destGUID = "Boss-Roar",
+    spellId = 26998,
+    spellName = "Demoralizing Roar",
+})
+auras = {
+    {
+        name = "Curse of the Elements",
+        stacks = 1,
+        expirationTime = 700,
+        spellId = 27228,
+    },
+}
+local roar = State.candidatesByBoss["Boss-Roar"].attackPower[26998]
+State:ResyncBossUnit("boss1", "Boss-Roar", provider, 410, 0.2)
+assertEqual(roar.active, true, "truncated scan leaves an unexpired roar active")
+local roarEval = State:EvaluateBoss("Boss-Roar", 410, 5, false, {
+    attackPower = { enabled = true, required = true },
+})[5]
+assertEqual(roarEval.state, "active", "attack power reads active while the roar runs")
+assertEqual(roarEval.spell.displayName, "Demo Roar", "attack power credits the roar")
+State:HandleAuraEvent({
+    observedAt = 415,
+    subevent = "SPELL_AURA_REMOVED",
+    destGUID = "Boss-Roar",
+    spellId = 26998,
+})
+State:ResyncBossUnit("boss1", "Boss-Roar", provider, 416, 0.2)
+assertEqual(roar.active, false, "combat log removal still takes the roar down")
 
 State:HandleAuraEvent({
     observedAt = 300,

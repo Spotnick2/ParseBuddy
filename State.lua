@@ -286,6 +286,7 @@ function PB.State:HandleAuraEvent(event)
         candidate.active = false
         candidate.removedAt = observedAt
         candidate.lastSeenAt = observedAt
+        candidate.clExpiresAt = nil
         return true
     end
 
@@ -314,9 +315,11 @@ function PB.State:HandleAuraEvent(event)
         and event.subevent ~= "SPELL_AURA_REMOVED_DOSE"
     then
         candidate.expiresAt = observedAt + spell.duration
+        candidate.clExpiresAt = candidate.expiresAt
         candidate.durationSource = "known"
     elseif event.subevent ~= "SPELL_AURA_REMOVED_DOSE" then
         candidate.expiresAt = nil
+        candidate.clExpiresAt = nil
         candidate.durationSource = nil
     end
 
@@ -349,6 +352,14 @@ function PB.State:ExpireBoss(bossGUID, now)
         end
     end
     return changed
+end
+
+-- The unit scan only reports the debuffs the client can currently see, and the
+-- server truncates that list on a heavily debuffed raid boss. While the combat
+-- log says an aura is still running, a scan that cannot see it carries no
+-- information -- SPELL_AURA_REMOVED is what takes it down.
+local function combatLogVouchesFor(candidate, now)
+    return candidate.clExpiresAt ~= nil and candidate.clExpiresAt > now
 end
 
 function PB.State:ResyncBossUnit(unitToken, bossGUID, auraProvider, now, preserveRecentSeconds, ignoredSpellId)
@@ -416,7 +427,11 @@ function PB.State:ResyncBossUnit(unitToken, bossGUID, auraProvider, now, preserv
                 local recentlySeen = preserveRecentSeconds
                     and candidate.lastSeenAt
                     and now - candidate.lastSeenAt <= preserveRecentSeconds
-                if candidate.active ~= false and not seenSpellIds[spellId] and not recentlySeen then
+                if candidate.active ~= false
+                    and not seenSpellIds[spellId]
+                    and not recentlySeen
+                    and not combatLogVouchesFor(candidate, now)
+                then
                     candidate.active = false
                     candidate.removedAt = now
                     candidate.lastScannedAt = now
