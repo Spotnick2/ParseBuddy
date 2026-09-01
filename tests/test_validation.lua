@@ -7,6 +7,7 @@ ParseBuddy = {
 
 assert(loadfile("Defaults.lua"))()
 assert(loadfile("DebuffLibrary.lua"))()
+assert(loadfile("CapabilityLibrary.lua"))()
 assert(loadfile("Debug.lua"))()
 
 ParseBuddy.Print = function(self, message)
@@ -54,6 +55,30 @@ for _, libraryGroup in ipairs(ParseBuddy.DebuffLibrary.groups) do
         "group " .. libraryGroup.key .. " requirement matches shipped settings")
     assertEqual(libraryGroup.visibility, shipped.visibility,
         "group " .. libraryGroup.key .. " visibility matches shipped settings")
+
+    -- A group with no capability entry resolves to notAvailable for every class,
+    -- which hides it and blocks its alerts without raising anything.
+    local classes = ParseBuddy.CapabilityLibrary.groupClasses[libraryGroup.key]
+    assertEqual(type(classes), "table",
+        "group " .. libraryGroup.key .. " declares which classes can provide it")
+    local providerCount = 0
+    local _class
+    for _class in pairs(classes) do
+        providerCount = providerCount + 1
+    end
+    assertEqual(providerCount > 0, true,
+        "group " .. libraryGroup.key .. " names at least one provider class")
+
+    -- Every spell needs a duration unless it explicitly defers to the client's
+    -- reported expiry. Without either, HandleAuraEvent cannot set a fallback
+    -- expiry and a missed removal leaves the row up indefinitely.
+    local _, spell
+    for _, spell in ipairs(libraryGroup.spells) do
+        local bounded = spell.clientDuration == true
+            or (type(spell.duration) == "number" and spell.duration > 0)
+        assertEqual(bounded, true,
+            "spell " .. tostring(spell.displayName) .. " has a bounded expiry")
+    end
 end
 
 print("ParseBuddy validation tests passed: " .. testsRun)

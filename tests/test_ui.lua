@@ -201,7 +201,7 @@ ParseBuddy.UI.frame = {
     SetHeight = function(_, value) height = value end,
 }
 ParseBuddy.UI.ApplyRowData = function(_, targetRow, rowData)
-    rendered[#rendered + 1] = { row = targetRow, group = rowData.group }
+    rendered[#rendered + 1] = { row = targetRow, group = rowData.group, effect = rowData.effect, state = rowData.state }
 end
 ParseBuddyDB.displayMode = "PROBLEMS_ONLY"
 ParseBuddyDB.showUnavailable = false
@@ -234,6 +234,30 @@ assertEqual(rendered[3].group, "Healthy Two", "full mode overwrites compact row 
 rendered = {}
 ParseBuddyDB.displayMode = "PROBLEMS_ONLY"
 assertEqual(ParseBuddy.UI:RenderEvaluations(compactEvaluations, true), 4, "test rendering bypasses display filtering")
+
+-- A row pool taller than the screen must degrade into a count, not run off the
+-- display. Test mode stays unfiltered: every evaluation is still selected, the
+-- last usable row just reports the ones that do not physically fit.
+local realMaxRows = ParseBuddy.UI.GetMaxRenderableRows
+ParseBuddy.UI.GetMaxRenderableRows = function() return 3 end
+rendered = {}
+assertEqual(ParseBuddy.UI:RenderEvaluations(compactEvaluations, true), 3, "render stops at the rows that fit on screen")
+assertEqual(rendered[1].group, "Healthy One", "clamped render keeps the first rows")
+assertEqual(rendered[2].group, "Missing", "clamped render keeps rows in order")
+assertEqual(rendered[3].effect, "2 more rows do not fit on screen", "final row reports the overflow count")
+assertEqual(rendered[3].state, "disabled", "overflow row uses the muted display state")
+assertEqual(height, 42 + (3 * 34) + 6, "clamped frame height covers only the drawn rows")
+
+ParseBuddy.UI.GetMaxRenderableRows = function() return 2 end
+rendered = {}
+ParseBuddy.UI:RenderEvaluations({ compactEvaluations[1], compactEvaluations[2], compactEvaluations[3] }, true)
+assertEqual(rendered[2].effect, "2 more rows do not fit on screen", "overflow count excludes the row it occupies")
+
+ParseBuddy.UI.GetMaxRenderableRows = function() return 4 end
+rendered = {}
+assertEqual(ParseBuddy.UI:RenderEvaluations(compactEvaluations, true), 4, "no overflow row when everything fits")
+assertEqual(rendered[4].group, "Expiring", "final evaluation drawn when it fits")
+ParseBuddy.UI.GetMaxRenderableRows = realMaxRows
 
 local refreshes = 0
 ParseBuddy.Encounter.active = true

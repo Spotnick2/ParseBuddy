@@ -17,6 +17,7 @@ local UNLOCKED_TEXTURE = "Interface\\Buttons\\LockButton-Unlocked-Up"
 local DISPLAY_MODE_PROBLEMS = "PROBLEMS_ONLY"
 local DISPLAY_MODE_FULL = "FULL_LIST"
 local VISIBILITY_APPLIED = "applied"
+local SCREEN_MARGIN = 40
 
 local STATE_COLORS = {
     active = { 0.08, 0.42, 0.12, 0.92 },
@@ -341,6 +342,38 @@ function PB.UI:IsEvaluationVisible(evaluation, displayMode, showUnavailable)
     return false
 end
 
+-- The row pool grows with the debuff library, and nothing about SetClampedToScreen
+-- shrinks a frame that is taller than the screen. Work out how many rows can
+-- actually be drawn at the frame's current scale so a long list degrades into an
+-- overflow row instead of running off the display.
+function PB.UI:GetMaxRenderableRows(frame)
+    local rowCapacity = #frame.rows
+    if not UIParent or not UIParent.GetHeight then
+        return rowCapacity
+    end
+    local ok, screenHeight = pcall(function() return UIParent:GetHeight() end)
+    if not ok or type(screenHeight) ~= "number" or screenHeight <= 0 then
+        return rowCapacity
+    end
+    local scale = 1
+    if frame.GetScale then
+        local scaled
+        ok, scaled = pcall(function() return frame:GetScale() end)
+        if ok and type(scaled) == "number" and scaled > 0 then
+            scale = scaled
+        end
+    end
+    local usable = (screenHeight / scale) - HEADER_HEIGHT - FRAME_PADDING - SCREEN_MARGIN
+    local fits = math.floor(usable / (ROW_HEIGHT + ROW_SPACING))
+    if fits < 1 then
+        fits = 1
+    end
+    if fits > rowCapacity then
+        fits = rowCapacity
+    end
+    return fits
+end
+
 function PB.UI:RenderEvaluations(evaluations, showAll)
     local frame = self:CreateFrame()
     local displayMode = PB.Config and PB.Config:GetDisplayMode() or ParseBuddyDB.displayMode
@@ -348,13 +381,40 @@ function PB.UI:RenderEvaluations(evaluations, showAll)
     local visibleCount = 0
     local index
 
+    local selected = {}
     for index = 1, #(evaluations or {}) do
         local evaluation = evaluations[index]
         if showAll or self:IsEvaluationVisible(evaluation, displayMode, showUnavailable) then
-            visibleCount = visibleCount + 1
-            self:ApplyRowData(frame.rows[visibleCount], self:EvaluationToRowData(evaluation))
-            setRowVisible(frame.rows[visibleCount], true)
+            selected[#selected + 1] = evaluation
         end
+    end
+
+    local maxRows = self:GetMaxRenderableRows(frame)
+    local drawn = #selected
+    local hidden = 0
+    if drawn > maxRows then
+        -- Spend the last usable row on the count rather than dropping rows silently.
+        hidden = drawn - (maxRows - 1)
+        drawn = maxRows - 1
+    end
+
+    for index = 1, drawn do
+        visibleCount = visibleCount + 1
+        self:ApplyRowData(frame.rows[visibleCount], self:EvaluationToRowData(selected[index]))
+        setRowVisible(frame.rows[visibleCount], true)
+    end
+
+    if hidden > 0 then
+        visibleCount = visibleCount + 1
+        self:ApplyRowData(frame.rows[visibleCount], {
+            iconSpellId = nil,
+            group = "",
+            effect = string.format("%d more row%s do not fit on screen", hidden, hidden == 1 and "" or "s"),
+            source = "",
+            status = "",
+            state = "disabled",
+        })
+        setRowVisible(frame.rows[visibleCount], true)
     end
 
     for index = visibleCount + 1, #frame.rows do

@@ -38,6 +38,17 @@ PB.Defaults.settings = {
         attackPower = { enabled = true, visibility = "always", required = true },
         attackSpeed = { enabled = true, visibility = "applied", required = false },
         recklessness = { enabled = true, visibility = "applied", required = false },
+        fireVulnerability = { enabled = true, visibility = "applied", required = false },
+        wintersChill = { enabled = true, visibility = "applied", required = false },
+        shadowVulnerability = { enabled = true, visibility = "applied", required = false },
+        shadowWeaving = { enabled = true, visibility = "applied", required = false },
+        misery = { enabled = true, visibility = "applied", required = false },
+        shadowEmbrace = { enabled = true, visibility = "applied", required = false },
+        mangle = { enabled = true, visibility = "applied", required = false },
+        hemorrhage = { enabled = true, visibility = "applied", required = false },
+        insectSwarm = { enabled = true, visibility = "applied", required = false },
+        exposeWeakness = { enabled = true, visibility = "applied", required = false },
+        crusaderJudgement = { enabled = true, visibility = "applied", required = false },
     },
 }
 

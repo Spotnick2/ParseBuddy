@@ -18,6 +18,8 @@ ParseBuddy will provide a compact, real-time display of important boss debuff gr
 
 Equivalent effects will share one row. For example, Sunder Armor and Expose Armor both satisfy the Major Armor Reduction group.
 
+Core raid debuffs are always shown, so a missing one is obvious. Situational, talent-gated effects such as Improved Scorch, Winter's Chill, Shadow Weaving, Misery, Mangle and Expose Weakness are tracked as applied-only: they appear while they are on the boss and stay out of the way otherwise, because class presence alone is not evidence that anyone specced them.
+
 ## Planned MVP
 
 - Spell Vulnerability
@@ -89,7 +91,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 2. Movable/lockable UI frame and deterministic `/pb test` rows
 3. Debuff library and deterministic group evaluator
 4. Encounter detection and boss GUID tracking
-5. CLEU aura tracking for six MVP groups
+5. CLEU aura tracking for the core MVP groups
 6. Complete: opportunistic boss aura resync and timer expiration
 7. Complete: debug tools, polish, and in-game acceptance checklist
 8. Complete: configuration UX discovery, Blizzard settings panel, and live settings wiring
@@ -132,7 +134,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - `/pb scale 0.6` and `/pb scale 1.4` resize the compact frame and persist after `/reload`.
 - `/pb opacity 0.5` makes the frame translucent and persists after `/reload`.
 - The close button hides the test frame.
-- `/pb test` renders all seven monitored groups from deterministic evaluator state.
+- `/pb test` renders every monitored group from deterministic evaluator state. If more rows are selected than physically fit at the current scale, the last row reports how many did not fit rather than letting the frame run off the screen.
 - Problems Only is the persisted default and hides healthy active rows while showing required missing/grace, partial, expiring, and unknown-source rows.
 - Full List shows every enabled `always` group, including healthy active rows.
 - An `applied` group ignores the display mode. It draws a row only while the effect is on the boss and never reports it missing, so situational effects stay out of the way until someone actually provides them.

@@ -23,7 +23,9 @@ PB.DebuffLibrary = {
             mode = "any",
             spells = {
                 { displayName = "Sunder", spellIds = { 7386, 7405, 8380, 11596, 11597, 25225 }, requiredStacks = 5, duration = 30 },
-                { displayName = "Expose", spellIds = { 8647, 8649, 8650, 11197, 11198, 26866 } },
+                -- Expose Armor carries no static duration here by design: its expiry is
+                -- taken from the client during an aura scan instead.
+                { displayName = "Expose", spellIds = { 8647, 8649, 8650, 11197, 11198, 26866 }, clientDuration = true },
             },
         },
         {
@@ -82,6 +84,137 @@ PB.DebuffLibrary = {
             mode = "any",
             spells = {
                 { displayName = "Recklessness", spellIds = { 704, 7658, 7659, 11717, 27226 }, duration = 120 },
+            },
+        },
+        -- The groups below were built from spell IDs, durations and stack counts
+        -- observed directly in this project's own combat logs, cross-checked
+        -- against LibClassicDurations where that database covers them. Only IDs
+        -- with direct evidence are listed: a rank nobody in a level 70 raid casts
+        -- is better omitted than guessed, and an unlisted rank simply goes
+        -- uncredited rather than being mis-attributed.
+        --
+        -- All of them are talent-gated rather than class-gated, so they ship as
+        -- applied-only. Class presence alone must never claim one is missing.
+        {
+            key = "fireVulnerability",
+            label = "Fire Vulnerability",
+            missingText = "Improved Scorch",
+            required = false,
+            visibility = "applied",
+            mode = "any",
+            spells = {
+                { displayName = "Fire Vuln", spellIds = { 22959 }, requiredStacks = 5, duration = 30 },
+            },
+        },
+        {
+            key = "wintersChill",
+            label = "Winter's Chill",
+            missingText = "Winter's Chill",
+            required = false,
+            visibility = "applied",
+            mode = "any",
+            spells = {
+                { displayName = "Winter's Chill", spellIds = { 12579 }, requiredStacks = 5, duration = 15 },
+            },
+        },
+        {
+            key = "shadowVulnerability",
+            label = "Shadow Vulnerability",
+            missingText = "Improved Shadow Bolt",
+            required = false,
+            visibility = "applied",
+            mode = "any",
+            spells = {
+                { displayName = "Shadow Vuln", spellIds = { 17794, 17797, 17798, 17799, 17800 }, requiredStacks = 4, duration = 12 },
+            },
+        },
+        {
+            key = "shadowWeaving",
+            label = "Shadow Weaving",
+            missingText = "Shadow Weaving",
+            required = false,
+            visibility = "applied",
+            mode = "any",
+            spells = {
+                { displayName = "Shadow Weaving", spellIds = { 15258 }, requiredStacks = 5, duration = 15 },
+            },
+        },
+        {
+            key = "misery",
+            label = "Misery",
+            missingText = "Misery",
+            required = false,
+            visibility = "applied",
+            mode = "any",
+            spells = {
+                { displayName = "Misery", spellIds = { 33200 }, duration = 24 },
+            },
+        },
+        {
+            key = "shadowEmbrace",
+            label = "Shadow Embrace",
+            missingText = "Shadow Embrace",
+            required = false,
+            visibility = "applied",
+            mode = "any",
+            spells = {
+                { displayName = "Shadow Embrace", spellIds = { 32390 }, duration = 12 },
+            },
+        },
+        {
+            key = "mangle",
+            label = "Bleed Damage",
+            missingText = "Mangle",
+            required = false,
+            visibility = "applied",
+            mode = "any",
+            spells = {
+                { displayName = "Mangle (Bear)", spellIds = { 33987 }, duration = 12 },
+                { displayName = "Mangle (Cat)", spellIds = { 33983 }, duration = 12 },
+            },
+        },
+        {
+            key = "hemorrhage",
+            label = "Hemorrhage",
+            missingText = "Hemorrhage",
+            required = false,
+            visibility = "applied",
+            mode = "any",
+            spells = {
+                { displayName = "Hemorrhage", spellIds = { 16511, 17347, 17348 }, duration = 15 },
+            },
+        },
+        {
+            key = "insectSwarm",
+            label = "Insect Swarm",
+            missingText = "Insect Swarm",
+            required = false,
+            visibility = "applied",
+            mode = "any",
+            spells = {
+                { displayName = "Insect Swarm", spellIds = { 5570, 24974, 24975, 24976, 24977 }, duration = 12 },
+            },
+        },
+        {
+            key = "exposeWeakness",
+            label = "Expose Weakness",
+            missingText = "Expose Weakness",
+            required = false,
+            visibility = "applied",
+            mode = "any",
+            spells = {
+                { displayName = "Expose Weakness", spellIds = { 34501 }, duration = 7 },
+            },
+        },
+        {
+            key = "crusaderJudgement",
+            label = "Crusader",
+            missingText = "Judgement of the Crusader",
+            required = false,
+            visibility = "applied",
+            mode = "any",
+            spells = {
+                { displayName = "Crusader", spellIds = { 21183, 20188, 20300, 20301, 20302, 20303, 27159 }, duration = 20 },
             },
         },
     },

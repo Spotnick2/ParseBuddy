@@ -117,7 +117,7 @@ assertEqual(Config:HandleBroadcastCommand("delay 61"), false, "invalid broadcast
 
 local messageCount = #ParseBuddy.messages
 Config:PrintGroups()
-assertEqual(#ParseBuddy.messages, messageCount + 7, "groups command prints every stable group key")
+assertEqual(#ParseBuddy.messages, messageCount + #ParseBuddy.DebuffLibrary.groups, "groups command prints every stable group key")
 
 -- Upgrading an existing install: `visibility` postdates these settings, so it is
 -- derived from the intent already stored in `required` rather than taken from
