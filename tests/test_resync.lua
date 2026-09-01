@@ -97,8 +97,10 @@ assertEqual(recent.active, true, "same-frame CLEU candidate survives a lagging a
 State:ResyncBossUnit("boss1", "Boss-Race", provider, 200.3, 0.2)
 assertEqual(recent.active, true, "scan cannot clear an aura the combat log still vouches for")
 State:ResyncBossUnit("boss1", "Boss-Race", provider, 241, 0.2)
-assertEqual(recent.active, false, "scan clears the candidate once its CLEU duration lapses")
-assertEqual(recent.removedAt, 241, "scan records inferred removal after the CLEU vouch ends")
+assertEqual(recent.active, true, "scan absence never retires an aura the combat log holds")
+State:ExpireBoss("Boss-Race", 241)
+assertEqual(recent.active, false, "expiry retires the candidate once its CLEU duration lapses")
+assertEqual(recent.removedAt, 240, "expiry records the aura's own end as the removal time")
 
 -- A rarely recast debuff (Demoralizing Roar) must survive scans that cannot see
 -- it: the client truncates the harmful aura list on a heavily debuffed boss, and
@@ -150,6 +152,10 @@ State:HandleAuraEvent({
 })
 local exposed = State.candidatesByBoss["Boss-Expose"].majorArmor[26866]
 assertEqual(exposed.expiresAt, nil, "no static duration is invented for Expose Armor")
+auras = {}
+State:ResyncBossUnit("boss1", "Boss-Expose", provider, 501, 0.2)
+assertEqual(exposed.active, true, "a never-enumerated Expose survives with no known duration")
+assertEqual(exposed.removedAt, nil, "no removal is inferred for an aura the scan never saw")
 auras = {
     {
         name = "Expose Armor",
@@ -159,13 +165,39 @@ auras = {
         spellId = 26866,
     },
 }
-State:ResyncBossUnit("boss1", "Boss-Expose", provider, 501, 0.2)
+State:ResyncBossUnit("boss1", "Boss-Expose", provider, 502, 0.2)
 assertEqual(exposed.expiresAt, 530, "scan supplies the client expiration for Expose Armor")
 auras = {}
-State:ResyncBossUnit("boss1", "Boss-Expose", provider, 502, 0.2)
+State:ResyncBossUnit("boss1", "Boss-Expose", provider, 503, 0.2)
 assertEqual(exposed.active, true, "truncated scan respects a scan-provided expiration")
-State:ResyncBossUnit("boss1", "Boss-Expose", provider, 531, 0.2)
-assertEqual(exposed.active, false, "Expose Armor clears once its client expiration lapses")
+State:HandleAuraEvent({
+    observedAt = 510,
+    subevent = "SPELL_AURA_REMOVED",
+    destGUID = "Boss-Expose",
+    spellId = 26866,
+})
+assertEqual(exposed.active, false, "combat log removal takes Expose Armor down")
+
+-- Late-load recovery: a candidate only ever seen by a scan carries no combat log
+-- claim, so the scan stays free to retire it once its expiration lapses.
+auras = {
+    {
+        name = "Sunder Armor",
+        stacks = 5,
+        expirationTime = 630,
+        sourceUnit = "raid1",
+        spellId = 25225,
+    },
+}
+State:ResyncBossUnit("boss1", "Boss-Late", provider, 600, 0.2)
+local lateLoaded = State.candidatesByBoss["Boss-Late"].majorArmor[25225]
+assertEqual(lateLoaded.active, true, "late-load scan recovers an unseen aura")
+auras = {}
+State:ResyncBossUnit("boss1", "Boss-Late", provider, 601, 0.2)
+assertEqual(lateLoaded.active, true, "scan-only candidate survives while its expiration runs")
+State:ResyncBossUnit("boss1", "Boss-Late", provider, 631, 0.2)
+assertEqual(lateLoaded.active, false, "scan retires a scan-only candidate once it lapses")
+assertEqual(lateLoaded.removedAt, 631, "scan records inferred removal for its own candidate")
 
 State:HandleAuraEvent({
     observedAt = 300,
