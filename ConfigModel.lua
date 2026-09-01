@@ -140,9 +140,10 @@ function PB.ConfigPanelModel:SetGroupMode(groupKey, mode)
         -- Leave visibility alone so re-enabling restores the previous tier.
         settings.enabled = false
     elseif mode == "applied" then
+        -- `required` is a separate preference and Broadcast already suppresses
+        -- applied-only groups, so preserve it for the trip back to always.
         settings.enabled = true
         settings.visibility = "applied"
-        settings.required = false
     else
         settings.enabled = true
         settings.visibility = "always"

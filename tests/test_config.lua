@@ -52,7 +52,10 @@ Config:HandleGroupCommand("attackSpeed required")
 assertEqual(appliedGroup.required, true, "required verb still sets the alert flag")
 Config:HandleGroupCommand("attackSpeed applied")
 assertEqual(appliedGroup.visibility, "applied", "applied verb demotes the group")
-assertEqual(appliedGroup.required, false, "applied verb clears the alert flag")
+assertEqual(appliedGroup.required, true, "applied verb preserves the separate alert preference")
+Config:HandleGroupCommand("attackSpeed always")
+assertEqual(appliedGroup.required, true, "returning to always restores the alert preference")
+Config:HandleGroupCommand("attackSpeed applied")
 Config:HandleGroupCommand("attackSpeed disable")
 assertEqual(appliedGroup.enabled, false, "disable verb stops tracking")
 assertEqual(appliedGroup.visibility, "applied", "disable preserves the chosen tier")
@@ -145,8 +148,10 @@ assertEqual(ParseBuddyDB.settings.groups.attackSpeed.visibility, "always",
     "an upgraded required group keeps reporting absence")
 assertEqual(ParseBuddyDB.settings.groups.attackSpeed.required, true,
     "upgrading does not clear a deliberate alert flag")
-assertEqual(ParseBuddyDB.settings.groups.recklessness.visibility, "applied",
-    "an upgraded optional group becomes applied-only")
+assertEqual(ParseBuddyDB.settings.groups.recklessness.visibility, "always",
+    "an upgraded optional group keeps showing its missing row in Full List")
+assertEqual(ParseBuddyDB.settings.groups.recklessness.required, false,
+    "upgrading does not change an optional group's alert preference")
 assertEqual(ParseBuddyCharDB.settings.groups.attackSpeed.visibility, "always",
     "personal settings are derived independently of the account store")
 assertEqual(ParseBuddyDB.settings.groups.majorArmor.visibility, "always",

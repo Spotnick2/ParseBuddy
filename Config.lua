@@ -19,11 +19,14 @@ local function visibilityText(value)
     return value == "applied" and "show if applied" or "always show"
 end
 
--- `visibility` postdates the original group settings. A stored group entry that
--- predates it already carries the user's intent in `required`, so derive from
--- that instead of letting the new shipped defaults overwrite a deliberate
--- choice. A fresh install has no group entries at this point and so takes the
--- shipped defaults untouched.
+-- `visibility` postdates the original group settings, and every group that
+-- predates it behaved as `always`: its missing row showed in Full List, and
+-- `required` only ever gated Problems Only and alerting, never Full List
+-- presence. So a stored entry becomes `always` whatever its requirement flag
+-- says -- deriving `applied` from `required = false` would flip both of those
+-- behaviours for a group the user merely marked optional. A fresh install has
+-- no group entries here and takes the shipped defaults untouched, which is how
+-- the new applied-only groups arrive.
 local function deriveGroupVisibility(settings)
     if type(settings) ~= "table" or type(settings.groups) ~= "table" then
         return
@@ -31,7 +34,7 @@ local function deriveGroupVisibility(settings)
     local _, groupSettings
     for _, groupSettings in pairs(settings.groups) do
         if type(groupSettings) == "table" and groupSettings.visibility == nil then
-            groupSettings.visibility = groupSettings.required ~= false and "always" or "applied"
+            groupSettings.visibility = "always"
         end
     end
 end
@@ -188,7 +191,7 @@ function PB.Config:GetGroupSettings(groupKey)
         settings.groups[groupKey] = groupSettings
     end
     if groupSettings.visibility == nil then
-        groupSettings.visibility = groupSettings.required ~= false and "always" or "applied"
+        groupSettings.visibility = "always"
     end
     return groupSettings
 end
@@ -221,9 +224,11 @@ function PB.Config:HandleGroupCommand(argument)
         settings.enabled = true
         settings.visibility = "always"
     elseif action == "applied" then
+        -- Leave `required` alone: it is a separate preference, Broadcast already
+        -- suppresses applied-only groups regardless of it, and clearing it would
+        -- lose the opt-in when the group returns to always.
         settings.enabled = true
         settings.visibility = "applied"
-        settings.required = false
     elseif action == "enable" then
         -- Legacy verb: turn tracking back on without disturbing a deliberate
         -- applied-only choice.

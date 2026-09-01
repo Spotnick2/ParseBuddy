@@ -34,7 +34,11 @@ function PB.Summary:Begin(encounter)
             groups[group.key] = {
                 key = group.key,
                 label = group.label,
-                required = groupSettings.required ~= false,
+                -- Report what actually applies. An applied-only group cannot
+                -- alert whatever its preference says, so labelling it required
+                -- would be misleading.
+                required = groupSettings.required ~= false
+                    and groupSettings.visibility ~= "applied",
                 visibility = groupSettings.visibility or "always",
                 observed = false,
                 current = "missing",
