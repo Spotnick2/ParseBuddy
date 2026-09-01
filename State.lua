@@ -239,6 +239,14 @@ function PB.State:CreateTestEvaluations()
         recklessness = {
             { spellId = 27226, sourceName = "Warlockname", sourceGUID = "Player-Test-4", active = true, expiresAt = now + 86 },
         },
+        -- Two applied-only groups carry sample state so the preview exercises
+        -- the tier and the stacking rows, rather than being a wall of red.
+        fireVulnerability = {
+            { spellId = 22959, sourceName = "Magename", sourceGUID = "Player-Test-5", active = true, stacks = 3, expiresAt = now + 22 },
+        },
+        wintersChill = {
+            { spellId = 12579, sourceName = "Magename", sourceGUID = "Player-Test-5", active = true, stacks = 5, expiresAt = now + 11 },
+        },
     }
     local options = {
         attackPower = { enabled = true, required = true, capability = "notAvailable" },
