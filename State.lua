@@ -298,6 +298,7 @@ function PB.State:HandleAuraEvent(event)
         candidate.active = false
         candidate.removedAt = observedAt
         candidate.lastSeenAt = observedAt
+        candidate.clActive = false
         return true
     end
 
@@ -321,6 +322,7 @@ function PB.State:HandleAuraEvent(event)
     candidate.active = true
     candidate.removedAt = nil
     candidate.lastSeenAt = observedAt
+    candidate.clActive = true
     local spell = PB.DebuffLibrary.spellsById[event.spellId]
     if spell and spell.duration
         and event.subevent ~= "SPELL_AURA_REMOVED_DOSE"
@@ -361,6 +363,21 @@ function PB.State:ExpireBoss(bossGUID, now)
         end
     end
     return changed
+end
+
+-- The unit scan only reports the debuffs the client can currently see, and the
+-- server truncates that list on a heavily debuffed raid boss, so absence from a
+-- scan is not evidence that an aura ended. A scan may only retire a candidate it
+-- is actually the authority for: one the combat log is not currently holding and
+-- whose last known expiration has already passed. The combat log owns aura
+-- lifecycle -- SPELL_AURA_REMOVED, or expiry through ExpireBoss, takes an aura
+-- down. A candidate the scan alone discovered during late-load recovery has no
+-- combat log claim, so the scan can still retire it once its expiration lapses.
+local function scanMayRetire(candidate, now)
+    if candidate.clActive then
+        return false
+    end
+    return candidate.expiresAt == nil or candidate.expiresAt <= now
 end
 
 function PB.State:ResyncBossUnit(unitToken, bossGUID, auraProvider, now, preserveRecentSeconds, ignoredSpellId)
@@ -428,7 +445,11 @@ function PB.State:ResyncBossUnit(unitToken, bossGUID, auraProvider, now, preserv
                 local recentlySeen = preserveRecentSeconds
                     and candidate.lastSeenAt
                     and now - candidate.lastSeenAt <= preserveRecentSeconds
-                if candidate.active ~= false and not seenSpellIds[spellId] and not recentlySeen then
+                if candidate.active ~= false
+                    and not seenSpellIds[spellId]
+                    and not recentlySeen
+                    and scanMayRetire(candidate, now)
+                then
                     candidate.active = false
                     candidate.removedAt = now
                     candidate.lastScannedAt = now
