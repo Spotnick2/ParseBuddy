@@ -9,6 +9,17 @@ PB.CapabilityLibrary = {
         attackPower = { WARRIOR = true, DRUID = true },
         attackSpeed = { WARRIOR = true },
         recklessness = { WARLOCK = true },
+        fireVulnerability = { MAGE = true },
+        wintersChill = { MAGE = true },
+        shadowVulnerability = { WARLOCK = true },
+        shadowWeaving = { PRIEST = true },
+        misery = { PRIEST = true },
+        shadowEmbrace = { WARLOCK = true },
+        mangle = { DRUID = true },
+        hemorrhage = { ROGUE = true },
+        insectSwarm = { DRUID = true },
+        exposeWeakness = { HUNTER = true },
+        crusaderJudgement = { PALADIN = true },
     },
 }
 

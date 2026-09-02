@@ -18,6 +18,9 @@ local sourceSettings = ParseBuddy.Defaults:CopySettings(ParseBuddy.Defaults.sett
 sourceSettings.displayMode = "FULL_LIST"
 sourceSettings.groups.attackPower.enabled = false
 sourceSettings.groups.recklessness.required = false
+-- This group is the fixture for "optional flag survives into the summary", so
+-- keep it always-visible; applied-only groups are covered separately below.
+sourceSettings.groups.recklessness.visibility = "always"
 
 ParseBuddy.Config = {
     GetSettings = function() return sourceSettings end,
@@ -106,6 +109,11 @@ assertNear(armor.missing, 2, "missing duration tracked")
 assertNear(armor.satisfiedPercent, 57.142857, "satisfied percentage calculated")
 assertEqual(findGroup(summary, "attackPower"), nil, "disabled group omitted from final summary")
 assertEqual(findGroup(summary, "recklessness").required, false, "optional flag preserved in final summary")
+assertEqual(
+    findGroup(summary, "attackSpeed"),
+    nil,
+    "applied-only group never observed is omitted instead of reported as missing"
+)
 assertEqual(#summary.primarySwitches, 2, "primary switches retained as summary metadata")
 assertEqual(summary.primarySwitches[2].guid, "Boss-B", "latest primary switch GUID retained")
 assertEqual(ParseBuddyDB.lastEncounterSummary, nil, "completed summary is not persisted in account saved variables")

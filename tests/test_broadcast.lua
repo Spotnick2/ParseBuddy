@@ -191,6 +191,10 @@ assertEqual(string.find(diagnosticLines[1], "enabled=yes", 1, true) ~= nil, true
 assertEqual(string.find(diagnosticLines[2], "group=majorArmor", 1, true) ~= nil, true, "diagnostics include pending group")
 
 settings.groups.attackSpeed.enabled = true
+-- attackSpeed ships as an applied-only, non-alerting group; this block is about
+-- the global cooldown between two simultaneous alerts, so opt it in explicitly.
+settings.groups.attackSpeed.visibility = "always"
+settings.groups.attackSpeed.required = true
 capability.attackSpeed = "available"
 settings.broadcast.delay = 0
 settings.broadcast.channel = "raid"
@@ -208,5 +212,19 @@ assertEqual(#sent, sentBeforeGlobalCooldown + 1, "global cooldown blocks the sec
 now = 211
 ParseBuddy.Broadcast:ProcessDue()
 assertEqual(#sent, sentBeforeGlobalCooldown + 2, "second alert sends after global cooldown")
+
+-- An applied-only group never reports absence on screen, so it must not announce
+-- it in chat either, even if the alert flag was left set.
+settings.groups.faerieFire.enabled = true
+settings.groups.faerieFire.visibility = "applied"
+settings.groups.faerieFire.required = true
+capability.faerieFire = "available"
+sent = {}
+now = 300
+ParseBuddy.Broadcast:Begin({ id = 13, name = "Boss", startedAt = 300 })
+now = 320
+ParseBuddy.Broadcast:Observe(now, { evaluation("faerieFire", "missing") })
+ParseBuddy.Broadcast:ProcessDue()
+assertEqual(#sent, 0, "applied-only group never alerts even with the alert flag set")
 
 print("ParseBuddy Broadcast tests passed: " .. testsRun)

@@ -29,7 +29,7 @@ assertEqual(activeDespiteUnavailable.state, "active", "active candidate takes pr
 local testEvaluations = State:CreateTestEvaluations()
 assertEqual(testEvaluations[5].state, "notAvailable", "deterministic test mode includes a not-available example")
 
-assertEqual(#Library.groups, 7, "seven monitored groups")
+assertEqual(#Library.groups, 18, "eighteen monitored groups")
 assertEqual(Library.spellIdToGroupKey[27228], "spellVulnerability", "CoE lookup")
 assertEqual(Library.spellIdToGroupKey[25225], "majorArmor", "Sunder lookup")
 assertEqual(Library.spellIdToGroupKey[26866], "majorArmor", "Expose lookup")

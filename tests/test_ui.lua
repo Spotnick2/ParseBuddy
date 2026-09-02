@@ -151,6 +151,35 @@ assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("active", true, true, "
 assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("notAvailable", true, false, "Unavailable"), "PROBLEMS_ONLY", false), false, "unavailable row hidden by default in problems mode")
 assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("notAvailable", false, false, "Unavailable"), "PROBLEMS_ONLY", true), true, "scoped setting shows unavailable row in problems mode")
 assertEqual(ParseBuddy.UI:IsEvaluationVisible(evaluation("notAvailable", true, false, "Unavailable"), "FULL_LIST", false), true, "full mode always shows unavailable row")
+-- Applied-only groups override both display modes: they confirm a debuff landed
+-- and never report one absent.
+local function appliedEvaluation(state, sourceKnown)
+    local built = evaluation(state, false, sourceKnown, "Applied")
+    built.visibility = "applied"
+    return built
+end
+
+local IS_VISIBLE = ParseBuddy.UI.IsEvaluationVisible
+local _, mode
+for _, mode in ipairs({ "PROBLEMS_ONLY", "FULL_LIST" }) do
+    assertEqual(IS_VISIBLE(ParseBuddy.UI, appliedEvaluation("active", true), mode, true), true,
+        "applied-only healthy row shown in " .. mode)
+    assertEqual(IS_VISIBLE(ParseBuddy.UI, appliedEvaluation("expiring", true), mode, true), true,
+        "applied-only expiring row shown in " .. mode)
+    assertEqual(IS_VISIBLE(ParseBuddy.UI, appliedEvaluation("partial", true), mode, true), true,
+        "applied-only partial row shown in " .. mode)
+    assertEqual(IS_VISIBLE(ParseBuddy.UI, appliedEvaluation("missing", false), mode, true), false,
+        "applied-only missing row hidden in " .. mode)
+    assertEqual(IS_VISIBLE(ParseBuddy.UI, appliedEvaluation("grace", false), mode, true), false,
+        "applied-only grace row hidden in " .. mode)
+    assertEqual(IS_VISIBLE(ParseBuddy.UI, appliedEvaluation("notAvailable", false), mode, true), false,
+        "applied-only unavailable row hidden in " .. mode)
+end
+local disabledApplied = appliedEvaluation("active", true)
+disabledApplied.state = "disabled"
+assertEqual(IS_VISIBLE(ParseBuddy.UI, disabledApplied, "FULL_LIST", true), false,
+    "disabled still wins over applied-only visibility")
+
 local unavailableRow = ParseBuddy.UI:EvaluationToRowData(evaluation("notAvailable", true, false, "Unavailable"))
 assertEqual(unavailableRow.status, "NOT AVAILABLE", "unavailable evaluation uses explicit status")
 assertEqual(unavailableRow.state, "notAvailable", "unavailable evaluation uses gray display state")
@@ -172,7 +201,7 @@ ParseBuddy.UI.frame = {
     SetHeight = function(_, value) height = value end,
 }
 ParseBuddy.UI.ApplyRowData = function(_, targetRow, rowData)
-    rendered[#rendered + 1] = { row = targetRow, group = rowData.group }
+    rendered[#rendered + 1] = { row = targetRow, group = rowData.group, effect = rowData.effect, state = rowData.state }
 end
 ParseBuddyDB.displayMode = "PROBLEMS_ONLY"
 ParseBuddyDB.showUnavailable = false
@@ -205,6 +234,30 @@ assertEqual(rendered[3].group, "Healthy Two", "full mode overwrites compact row 
 rendered = {}
 ParseBuddyDB.displayMode = "PROBLEMS_ONLY"
 assertEqual(ParseBuddy.UI:RenderEvaluations(compactEvaluations, true), 4, "test rendering bypasses display filtering")
+
+-- A row pool taller than the screen must degrade into a count, not run off the
+-- display. Test mode stays unfiltered: every evaluation is still selected, the
+-- last usable row just reports the ones that do not physically fit.
+local realMaxRows = ParseBuddy.UI.GetMaxRenderableRows
+ParseBuddy.UI.GetMaxRenderableRows = function() return 3 end
+rendered = {}
+assertEqual(ParseBuddy.UI:RenderEvaluations(compactEvaluations, true), 3, "render stops at the rows that fit on screen")
+assertEqual(rendered[1].group, "Healthy One", "clamped render keeps the first rows")
+assertEqual(rendered[2].group, "Missing", "clamped render keeps rows in order")
+assertEqual(rendered[3].effect, "2 more rows do not fit on screen", "final row reports the overflow count")
+assertEqual(rendered[3].state, "disabled", "overflow row uses the muted display state")
+assertEqual(height, 42 + (3 * 34) + 6, "clamped frame height covers only the drawn rows")
+
+ParseBuddy.UI.GetMaxRenderableRows = function() return 2 end
+rendered = {}
+ParseBuddy.UI:RenderEvaluations({ compactEvaluations[1], compactEvaluations[2], compactEvaluations[3] }, true)
+assertEqual(rendered[2].effect, "2 more rows do not fit on screen", "overflow count excludes the row it occupies")
+
+ParseBuddy.UI.GetMaxRenderableRows = function() return 4 end
+rendered = {}
+assertEqual(ParseBuddy.UI:RenderEvaluations(compactEvaluations, true), 4, "no overflow row when everything fits")
+assertEqual(rendered[4].group, "Expiring", "final evaluation drawn when it fits")
+ParseBuddy.UI.GetMaxRenderableRows = realMaxRows
 
 local refreshes = 0
 ParseBuddy.Encounter.active = true

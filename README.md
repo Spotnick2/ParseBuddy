@@ -6,7 +6,7 @@ ParseBuddy is an MVP World of Warcraft addon for TBC Anniversary. The implementa
 
 The AddOns settings entry is live. Changes apply immediately through the same global/personal settings and guarded actions used by slash commands; there is no Save or Apply workflow.
 
-The settings panel uses explicit selected segments, visible custom sliders, compact alternating group rows, one Required checkbox per group, colored availability, readable disabled controls, a dark reading surface, a visible scrollbar, and a secondary Diagnostics disclosure row.
+The settings panel uses explicit selected segments, visible custom sliders, compact alternating group rows, an Off/If applied/Always visibility control and one Alert checkbox per group, colored availability, readable disabled controls, a dark reading surface, a visible scrollbar, and a secondary Diagnostics disclosure row.
 
 All standalone segmented actions initialize with the same neutral styling as unselected choices; they do not depend on a later interaction to become readable.
 
@@ -17,6 +17,8 @@ Availability is read from the cached roster snapshot and repaints when that low-
 ParseBuddy will provide a compact, real-time display of important boss debuff groups. It will help raiders notice missing, expiring, partial, or active effects during a pull without performing post-fight analytics or relying on external services.
 
 Equivalent effects will share one row. For example, Sunder Armor and Expose Armor both satisfy the Major Armor Reduction group.
+
+Core raid debuffs are always shown, so a missing one is obvious. Situational, talent-gated effects such as Improved Scorch, Winter's Chill, Shadow Weaving, Misery, Mangle and Expose Weakness are tracked as applied-only: they appear while they are on the boss and stay out of the way otherwise, because class presence alone is not evidence that anyone specced them.
 
 ## Planned MVP
 
@@ -57,8 +59,11 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - `/pb profile personal`: use this character's settings; the first selection copies current global settings
 - `/pb groups`: list every stable group key and its active-scope settings
 - `/pb group <key>`: show one group's active-scope settings
-- `/pb group <key> enable|disable`: change whether a group is evaluated and displayed
-- `/pb group <key> required|optional`: change whether missing/grace is a problem in Problems Only
+- `/pb group <key> always`: track the group and report it both when present and when missing
+- `/pb group <key> applied`: track the group but draw a row only while the effect is on the boss
+- `/pb group <key> disable`: stop evaluating and displaying a group; the chosen tier is preserved
+- `/pb group <key> enable`: resume tracking without overriding a deliberate tier
+- `/pb group <key> required|optional`: change whether an `always` group may alert and whether missing/grace is a problem in Problems Only
 - `/pb summary`: print the most recently completed encounter's in-memory uptime summary
 - `/pb summary auto on`: automatically print the summary when an encounter ends
 - `/pb summary auto off`: disable automatic summary output; this is the account-wide default
@@ -86,7 +91,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 2. Movable/lockable UI frame and deterministic `/pb test` rows
 3. Debuff library and deterministic group evaluator
 4. Encounter detection and boss GUID tracking
-5. CLEU aura tracking for six MVP groups
+5. CLEU aura tracking for the core MVP groups
 6. Complete: opportunistic boss aura resync and timer expiration
 7. Complete: debug tools, polish, and in-game acceptance checklist
 8. Complete: configuration UX discovery, Blizzard settings panel, and live settings wiring
@@ -102,7 +107,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 ## Not Yet Implemented
 
 - Named profiles beyond the implemented global account scope and personal per-character scope
-- Additional optional debuff groups beyond Curse of Recklessness and boss-specific profiles
+- Boss-specific profiles
 - Multi-boss display sections
 - Sounds, raid-warning output, assignments, and import/export
 - Multiple simultaneous boss UI sections, multi-boss uptime aggregation, and a graphical summary window
@@ -120,8 +125,8 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - Frame lock, scale, opacity, and reset update account-wide frame settings immediately.
 - Alert destination/delay/test controls visibly disable while alerts are off, and Diagnostics starts collapsed.
 - Selected scope/mode/destination choices are visually distinct from unselected choices. Scale, opacity, and delay sliders show a track, fill, thumb, and numeric value.
-- Group rows are compact and aligned; Required checked means required, unchecked means optional. Availability is green, gray, or yellow for Available, Not Available, or Unknown.
-- `/pb test` shows seven deterministic green, yellow, red, and gray preview rows.
+- Group rows are compact and aligned. The Show control selects Off, If applied, or Always; the Alert checkbox applies only to Always groups and is disabled otherwise. Availability is green, gray, or yellow for Available, Not Available, or Unknown.
+- `/pb test` shows eighteen deterministic rows covering every monitored group: green active, yellow expiring and partial, red missing, and one gray `NOT AVAILABLE` example. Test mode is deliberately unfiltered, so applied-only groups appear here even when missing, which they never do during an encounter.
 - The frame can be dragged while unlocked.
 - The title-bar lock icon changes between locked and unlocked images and toggles dragging; `/pb lock` and `/pb unlock` provide the same behavior.
 - Frame position and lock state persist after `/reload`.
@@ -129,15 +134,16 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - `/pb scale 0.6` and `/pb scale 1.4` resize the compact frame and persist after `/reload`.
 - `/pb opacity 0.5` makes the frame translucent and persists after `/reload`.
 - The close button hides the test frame.
-- `/pb test` renders all seven monitored groups from deterministic evaluator state.
+- `/pb test` renders every monitored group from deterministic evaluator state. If more rows are selected than physically fit at the current scale, the last row reports how many did not fit rather than letting the frame run off the screen.
 - Problems Only is the persisted default and hides healthy active rows while showing required missing/grace, partial, expiring, and unknown-source rows.
-- Full List shows every enabled group, including healthy active rows.
+- Full List shows every enabled `always` group, including healthy active rows.
+- An `applied` group ignores the display mode. It draws a row only while the effect is on the boss and never reports it missing, so situational effects stay out of the way until someone actually provides them.
 - Roster availability is cached only on entering the world, roster changes, and encounter start. CLEU, the display ticker, and UI rendering never scan the roster.
 - Missing or grace rows become gray `NOT AVAILABLE` when a complete cached roster has no baseline provider class. Incomplete roster information remains `unknown` and preserves normal missing/grace behavior.
 - Active, partial, and expiring rows remain authoritative regardless of cached capability. ParseBuddy does not infer talents, specs, learned ranks, assignments, or player responsibility.
 - Problems Only hides `NOT AVAILABLE` by default; `/pb unavailable show|hide` is scoped with global/personal settings. Full List always shows enabled unavailable rows.
-- Broadcast settings are global/personal scoped and frozen at pull. They default off and apply only to enabled, required groups whose frozen roster capability is `available`.
-- Broadcasts wait for pull grace plus the configured delay, announce once per missing period, and re-arm only after the group becomes active or expiring. Partial, optional, disabled, unavailable, unknown-roster, grace, active, and expiring rows never alert.
+- Broadcast settings are global/personal scoped and frozen at pull. They default off and apply only to enabled, `always`, required groups whose frozen roster capability is `available`.
+- Broadcasts wait for pull grace plus the configured delay, announce once per missing period, and re-arm only after the group becomes active or expiring. Partial, optional, applied-only, disabled, unavailable, unknown-roster, grace, active, and expiring rows never alert.
 - Party, raid, and cached-leader routes never fall back to another channel. Unavailable routes are suppressed with conditional local debug output. Automatic messages contain group/effect text only, not roster member names.
 - The display ticker and CLEU path never send chat. State-changing evaluations schedule a separate deferred callback, with a 30-second per-group cooldown and 5-second global spacing.
 - `/pb mode problems` and `/pb mode full` switch immediately during an encounter and persist after `/reload`.
@@ -145,8 +151,9 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - Global display/group settings live in `ParseBuddyDB`; personal display/group settings live in `ParseBuddyCharDB`.
 - The first `/pb profile personal` copies the current global settings once. Later scope switching preserves independent edits in both stores.
 - Frame position, scale, opacity, and lock state remain account-wide regardless of active profile scope.
-- All groups default enabled. Curse of Recklessness defaults optional; the six original groups default required.
+- All groups default enabled. The five core groups default to Always and required. Attack Speed, Curse of Recklessness, and the eleven talent-gated groups default to If applied and do not alert. An existing install keeps every group it had stored on Always, so upgrading changes no behavior; only groups it had never seen take the new applied-only default.
 - Disabled groups are absent from both display modes. Optional missing/grace rows are hidden in Problems Only, while optional partial, expiring, and unknown-source rows remain visible.
+- Applied-only groups ignore the display mode. They never show a missing or unavailable row in either mode, and they do show a healthy active row in Problems Only, which is the one case where a green row is expected there.
 - Encounter summaries track group-level satisfied, partial, and missing intervals after the pull grace period. Active and expiring count as satisfied; equivalent effects share one group timeline without false gaps.
 - Summary settings are frozen at encounter start, including scope, display mode, enabled flags, and required flags. Mid-fight configuration changes do not rewrite the active summary.
 - Summaries are single-primary-boss and memory-only. The latest summary is cleared by `/pb clear`, a new encounter, or `/reload`; diagnostic snapshots remain separately persisted.
@@ -155,7 +162,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - Configured encounters accept registered NPC IDs and visible `boss1` through `boss5` GUIDs while rejecting arbitrary combat-log adds. Unconfigured encounters retain the generic fallback behavior.
 - The single displayed primary is selected deterministically: visible `boss1`, first visible registered boss, most recently relevant registered boss, then the previous authoritative target. Registered target switches retain each boss's candidate state.
 - Uptime remains single-primary in this version. Primary switches are retained as summary metadata but are not aggregated into a multi-boss result.
-- Starting a supported encounter shows the primary boss and all seven live group rows. Visible `bossN` units are preferred, but a tracked combat-log boss target can seed the display when no unit is exposed.
+- Starting a supported encounter shows the primary boss and every live Always group row. Applied-only groups appear only once their effect lands. Visible `bossN` units are preferred, but a tracked combat-log boss target can seed the display when no unit is exposed.
 - Missing groups are gray during pull grace and red afterward.
 - Applying, refreshing, stacking, or removing a tracked boss debuff updates its group row immediately.
 - Known-duration rows count down, turn yellow at the warning threshold, and become missing after expiration without requiring a removal event.
@@ -175,31 +182,32 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 Run these checks after `/reload` with Lua errors enabled:
 
 1. Run `/pb validate`. Record any missing IDs; expected client-specific failures must be investigated before the row is trusted.
-2. Run `/pb test` in both saved display modes. Verify all seven deterministic rows remain visible because test mode deliberately bypasses live filtering, including the gray `NOT AVAILABLE` example.
+2. Run `/pb test` in both saved display modes. Verify all eighteen deterministic rows remain visible because test mode deliberately bypasses live filtering, including the gray `NOT AVAILABLE` example and the missing applied-only rows. If the frame cannot fit every row at the current scale, the last row reports how many did not fit; that is expected, not a failure.
 3. Verify unlock, drag, lock, scale, `/pb reset`, and persistence across another `/reload`.
-4. Run `/pb profile`, `/pb groups`, and `/pb group recklessness`. Verify the default is global and Recklessness is enabled/optional.
+4. Run `/pb profile`, `/pb groups`, and `/pb group recklessness`. Verify the default is global and Recklessness reports enabled, show if applied, optional.
 5. Set a distinctive global mode/group combination, switch to personal, and verify it was copied. Change the personal settings, switch back to global, and confirm the global values were preserved. Reload and verify the selected scope and both settings stores persist.
 6. On a normal `boss1` encounter, use `/pb mode full` and verify every enabled row, source names, Sunder stacks, warning colors, and countdowns.
 7. Disable a group and verify it disappears from both modes. Mark another group optional and verify its missing/grace row disappears only in Problems Only while partial, expiring, or unknown-source states remain visible.
-8. Use `/pb mode problems`. Verify healthy green rows disappear; required missing/grace, partial, expiring, and unknown-source rows remain; unavailable rows are hidden by default; and the frame compacts without stale rows. Toggle `/pb unavailable show` and verify gray unavailable rows appear without affecting Full List.
-9. Apply and remove each available tracked debuff. Confirm CLEU changes appear immediately and known timers expire without requiring a removal event.
-10. Run `/pb debugscan` while the boss is visible. Confirm the boss count and tracked-aura count match the frame.
-11. Run `/pb debugauras` while targeting or focusing the active boss. Confirm visible boss-frame debuffs have matching spell IDs, remaining times, and tracked group labels where applicable.
-12. Run `/pb dump`. Confirm the primary GUID, scan reason, candidate expiration source, and visible evaluations match the boss.
-13. Retest Magtheridon: a channeler may seed the provisional display, but Magtheridon must replace it when identified and CoE must remain active in that event tick.
-14. On a phase transition, verify an unrelated add cannot replace a previously visible boss and relevant activity can reclaim the known boss.
-15. End or wipe the encounter. Confirm the ticker stops and the frame hides without stale test or encounter rows.
-16. After combat, run `/pb snapshot` and `/pb dump`. Confirm both show `COMPLETED SNAPSHOT`, `active=no`, final raw candidates, final evaluations, and the retained last meaningful live evaluations. Reload once and confirm the snapshot remains available, then clear it with `/pb clear`.
-17. Run `/pb summary`. Confirm total duration, grace-excluded measured duration, frozen scope/mode, and per-enabled-group satisfied/partial/missing seconds and percentages.
-18. Verify Sunder partial-to-five-stack and Sunder-to-Expose handoffs produce the expected group totals without a false missing gap. Let a known-duration effect expire without a removal event and confirm missing time begins at expiration.
-19. Enable `/pb summary auto on`, complete or wipe an encounter, and confirm automatic output. Disable it afterward and verify `/pb clear` clears both the diagnostic snapshot and completed summary.
-20. On Opera Hall encounter `655`, run `/pb targets`. Confirm configured NPC IDs `17533` and `17534`, accepted Romulo/Julianne GUIDs, current primary, and selection reason.
-21. Apply a tracked debuff to each Opera boss. Confirm relevant activity can switch the single-primary display when no higher-priority visible target exists, both bosses retain independent candidates, and tracked effects on unregistered adds do not change the primary.
-22. Run `/pb roster` while solo, in a party, and in a raid. Confirm cached members/classes and group capabilities match the roster. Remove the only provider for a group, wait for `GROUP_ROSTER_UPDATE`, and verify its missing/grace row becomes `NOT AVAILABLE` without any repeated roster scanning during combat.
-23. Run `/pb broadcast` and confirm it is off by default. Configure a personal or global channel and delay, switch scopes, and verify both settings stores remain independent.
-24. Out of combat, run `/pb broadcast test` and confirm it prints a clearly marked local-only message. Run it during combat and confirm it is blocked.
-25. Enable broadcasts for a supervised pull. Verify a required, roster-available missing group alerts once after grace plus delay; optional, disabled, partial, `NOT AVAILABLE`, and unknown-capability groups do not alert. Apply the effect, remove it again, and verify re-alerting respects the 30-second group cooldown and 5-second global spacing.
-26. Test party, raid, and leader routes. Confirm an unavailable requested destination is suppressed without falling back, and `/pb dump` shows frozen broadcast state and pending groups without exposing player names in automatic messages.
+8. Run `/pb group attackSpeed applied` with no warrior tank in the raid and verify the Attack Speed row is absent rather than red in both modes. Have a DPS warrior land a Thunder Clap and verify a green row appears with their name, then disappears when it expires. Set it back with `/pb group attackSpeed always` and verify the red missing row returns, and that a previously set Alert checkbox survived the round trip.
+9. Use `/pb mode problems`. Verify healthy green rows disappear; required missing/grace, partial, expiring, and unknown-source rows remain; unavailable rows are hidden by default; and the frame compacts without stale rows. Toggle `/pb unavailable show` and verify gray unavailable rows appear without affecting Full List.
+10. Apply and remove each available tracked debuff. Confirm CLEU changes appear immediately and known timers expire without requiring a removal event.
+11. Run `/pb debugscan` while the boss is visible. Confirm the boss count and tracked-aura count match the frame.
+12. Run `/pb debugauras` while targeting or focusing the active boss. Confirm visible boss-frame debuffs have matching spell IDs, remaining times, and tracked group labels where applicable.
+13. Run `/pb dump`. Confirm the primary GUID, scan reason, candidate expiration source, and visible evaluations match the boss.
+14. Retest Magtheridon: a channeler may seed the provisional display, but Magtheridon must replace it when identified and CoE must remain active in that event tick.
+15. On a phase transition, verify an unrelated add cannot replace a previously visible boss and relevant activity can reclaim the known boss.
+16. End or wipe the encounter. Confirm the ticker stops and the frame hides without stale test or encounter rows.
+17. After combat, run `/pb snapshot` and `/pb dump`. Confirm both show `COMPLETED SNAPSHOT`, `active=no`, final raw candidates, final evaluations, and the retained last meaningful live evaluations. Reload once and confirm the snapshot remains available, then clear it with `/pb clear`.
+18. Run `/pb summary`. Confirm total duration, grace-excluded measured duration, frozen scope/mode, and per-enabled-group satisfied/partial/missing seconds and percentages.
+19. Verify Sunder partial-to-five-stack and Sunder-to-Expose handoffs produce the expected group totals without a false missing gap. Let a known-duration effect expire without a removal event and confirm missing time begins at expiration.
+20. Enable `/pb summary auto on`, complete or wipe an encounter, and confirm automatic output. Disable it afterward and verify `/pb clear` clears both the diagnostic snapshot and completed summary.
+21. On Opera Hall encounter `655`, run `/pb targets`. Confirm configured NPC IDs `17533` and `17534`, accepted Romulo/Julianne GUIDs, current primary, and selection reason.
+22. Apply a tracked debuff to each Opera boss. Confirm relevant activity can switch the single-primary display when no higher-priority visible target exists, both bosses retain independent candidates, and tracked effects on unregistered adds do not change the primary.
+23. Run `/pb roster` while solo, in a party, and in a raid. Confirm cached members/classes and group capabilities match the roster. Remove the only provider for a group, wait for `GROUP_ROSTER_UPDATE`, and verify its missing/grace row becomes `NOT AVAILABLE` without any repeated roster scanning during combat.
+24. Run `/pb broadcast` and confirm it is off by default. Configure a personal or global channel and delay, switch scopes, and verify both settings stores remain independent.
+25. Out of combat, run `/pb broadcast test` and confirm it prints a clearly marked local-only message. Run it during combat and confirm it is blocked.
+26. Enable broadcasts for a supervised pull. Verify a required, roster-available missing group alerts once after grace plus delay; optional, disabled, partial, `NOT AVAILABLE`, and unknown-capability groups do not alert. Apply the effect, remove it again, and verify re-alerting respects the 30-second group cooldown and 5-second global spacing.
+27. Test party, raid, and leader routes. Confirm an unavailable requested destination is suppressed without falling back, and `/pb dump` shows frozen broadcast state and pending groups without exposing player names in automatic messages.
 
 `/pb dump` metrics are cumulative for the current encounter. `cleu` counts accepted tracked aura events, `refreshes` counts display evaluations, `ticker` counts 0.2-second ticks, and `scans` is split by boss appearance, CLEU, and manual debug scans. A growing ticker count must not increase scan counts by itself.
 
