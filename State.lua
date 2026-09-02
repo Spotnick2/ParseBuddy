@@ -100,7 +100,49 @@ local function isSatisfying(candidate, spell)
     return not spell.requiredStacks or (candidate.stacks or 0) >= spell.requiredStacks
 end
 
-local function classifyCandidate(candidate, spell, now, warningThreshold)
+local WARNING_FRACTION = 0.25
+local WARNING_FLOOR = 3
+local WARNING_CAP = 10
+
+-- A flat warning window cannot serve a library spanning a 7 second Expose
+-- Weakness and a 300 second Curse of the Elements: five seconds is most of the
+-- former's life and a rounding error on the latter. Warn at a quarter of the
+-- effect's own duration instead, floored so a very short effect still gets a
+-- usable heads-up and capped so a very long one does not warn for a minute.
+local function warningWindowFor(duration, cap)
+    cap = cap or WARNING_CAP
+    if cap < WARNING_FLOOR then
+        cap = WARNING_FLOOR
+    end
+    -- With no duration to scale against, warn only at the floor rather than the
+    -- cap: claiming a long effect is expiring is worse than warning late.
+    if not duration or duration <= 0 then
+        return WARNING_FLOOR
+    end
+    local window = duration * WARNING_FRACTION
+    if window < WARNING_FLOOR then
+        window = WARNING_FLOOR
+    end
+    if window > cap then
+        window = cap
+    end
+    return window
+end
+
+-- A spell without a declared duration (Expose Armor) still has one at runtime;
+-- the scan records what the client reported so the window can scale to it.
+local function knownDuration(candidate, spell)
+    if candidate.duration and candidate.duration > 0 then
+        return candidate.duration
+    end
+    return spell.duration
+end
+
+PB.State.WarningWindowFor = function(_, duration, cap)
+    return warningWindowFor(duration, cap)
+end
+
+local function classifyCandidate(candidate, spell, now, warningCap)
     if not isActive(candidate, now) then
         if candidate.lastSeenAt or candidate.removedAt or candidate.expiresAt then
             return STATE_RANK.recent, "recent", getRemaining(candidate, now)
@@ -114,7 +156,7 @@ local function classifyCandidate(candidate, spell, now, warningThreshold)
         return knownSource and STATE_RANK.partialKnown or STATE_RANK.partialUnknown, "partial", remaining
     end
 
-    if remaining and remaining <= warningThreshold then
+    if remaining and remaining <= warningWindowFor(knownDuration(candidate, spell), warningCap) then
         return knownSource and STATE_RANK.expiringKnown or STATE_RANK.expiringUnknown, "expiring", remaining
     end
 
@@ -144,7 +186,7 @@ end
 function PB.State:EvaluateGroup(group, candidates, options)
     options = options or {}
     local now = options.now or 0
-    local warningThreshold = options.warningThreshold or 5
+    local warningCap = options.warningCap or WARNING_CAP
 
     if options.enabled == false then
         return {
@@ -161,7 +203,7 @@ function PB.State:EvaluateGroup(group, candidates, options)
     for index, candidate in ipairs(candidates or {}) do
         local spell = PB.DebuffLibrary.spellsById[candidate.spellId]
         if spell and PB.DebuffLibrary.spellIdToGroupKey[candidate.spellId] == group.key then
-            local rank, kind, remaining = classifyCandidate(candidate, spell, now, warningThreshold)
+            local rank, kind, remaining = classifyCandidate(candidate, spell, now, warningCap)
             if rank then
                 local evaluated = {
                     rank = rank,
@@ -208,7 +250,7 @@ function PB.State:EvaluateGroups(candidatesByGroup, optionsByGroup, sharedOption
         local groupOptions = optionsByGroup and optionsByGroup[group.key] or {}
         local options = {
             now = groupOptions.now or (sharedOptions and sharedOptions.now) or 0,
-            warningThreshold = groupOptions.warningThreshold or (sharedOptions and sharedOptions.warningThreshold) or 5,
+            warningCap = groupOptions.warningCap or (sharedOptions and sharedOptions.warningCap) or WARNING_CAP,
             enabled = groupOptions.enabled,
             required = groupOptions.required,
             visibility = groupOptions.visibility,
@@ -251,7 +293,7 @@ function PB.State:CreateTestEvaluations()
     local options = {
         attackPower = { enabled = true, required = true, capability = "notAvailable" },
     }
-    return self:EvaluateGroups(candidates, options, { now = now, warningThreshold = 5 })
+    return self:EvaluateGroups(candidates, options, { now = now, warningCap = WARNING_CAP })
 end
 
 function PB.State:ResetEncounter()
@@ -413,6 +455,9 @@ function PB.State:ResyncBossUnit(unitToken, bossGUID, auraProvider, now, preserv
             candidate.spellName = aura.name
             candidate.destGUID = bossGUID
             candidate.stacks = aura.stacks and aura.stacks > 0 and aura.stacks or 1
+            if aura.duration and aura.duration > 0 then
+                candidate.duration = aura.duration
+            end
             candidate.active = true
             candidate.removedAt = nil
             candidate.lastSeenAt = now
@@ -470,7 +515,7 @@ local function candidatesAsArray(candidatesBySpell)
     return candidates
 end
 
-function PB.State:EvaluateBoss(bossGUID, now, warningThreshold, graceActive, settingsByGroup)
+function PB.State:EvaluateBoss(bossGUID, now, warningCap, graceActive, settingsByGroup)
     local bossCandidates = self.candidatesByBoss[bossGUID] or {}
     local evaluations = {}
     local index
@@ -487,7 +532,7 @@ function PB.State:EvaluateBoss(bossGUID, now, warningThreshold, graceActive, set
             candidatesAsArray(bossCandidates[group.key]),
             {
                 now = now,
-                warningThreshold = warningThreshold,
+                warningCap = warningCap,
                 enabled = groupSettings.enabled,
                 required = groupSettings.required,
                 visibility = groupSettings.visibility or group.visibility or "always",
