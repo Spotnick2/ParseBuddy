@@ -116,13 +116,22 @@ local function rowHeightFor(data)
     return data and data.detailed and ROW_HEIGHT_DETAIL or ROW_HEIGHT
 end
 
+-- The display ticker reaches RenderEvaluations five times a second, and it is
+-- only allowed to update timers, colours and row visibility. A row whose offset
+-- has not moved must not be reanchored, so steady-state refreshes touch no
+-- layout at all.
 local function positionRow(row, offset)
+    if row.parseBuddyOffset == offset then
+        return false
+    end
+    row.parseBuddyOffset = offset
     if not row.ClearAllPoints or not row.SetPoint then
-        return
+        return false
     end
     row:ClearAllPoints()
     row:SetPoint("TOPLEFT", FRAME_PADDING, -HEADER_HEIGHT - offset)
     row:SetPoint("TOPRIGHT", -FRAME_PADDING, -HEADER_HEIGHT - offset)
+    return true
 end
 
 local function setRowVisible(row, visible)
@@ -235,9 +244,14 @@ function PB.UI:EvaluationToRowData(evaluation)
         displayState = "warning"
     end
 
+    -- The group label always travels with the row. Encounter:BuildEvaluationLines
+    -- formats /pb dump, completed snapshots and the retained live view from this
+    -- same table, and a diagnostic that cannot say which group an effect
+    -- satisfied is worth much less. The live frame hides it via `detailed`
+    -- instead of dropping it here.
     return {
         iconSpellId = candidate and candidate.spellId or getDefaultIconSpellId(group),
-        group = detailed and group.label or "",
+        group = group.label,
         effect = effect,
         source = candidate and candidate.sourceName or "",
         status = status,

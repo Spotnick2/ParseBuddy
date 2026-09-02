@@ -194,7 +194,9 @@ assertEqual(unavailableRow.group, "Unavailable", "a detail row names its group")
 -- and repeating it is what doubled the frame height.
 local healthyRow = ParseBuddy.UI:EvaluationToRowData(evaluation("active", true, true, "Healthy"))
 assertEqual(healthyRow.detailed, false, "a healthy row stays on one compact line")
-assertEqual(healthyRow.group, "", "a healthy row does not repeat the group label")
+-- The label is hidden on screen by `detailed`, never dropped from the data:
+-- Encounter:BuildEvaluationLines formats /pb dump and snapshots from this table.
+assertEqual(healthyRow.group, "Healthy", "a healthy row still carries its group label for diagnostics")
 assertEqual(healthyRow.effect, "Healthy", "a healthy row leads with the effect name")
 
 local rendered = {}
@@ -203,11 +205,17 @@ local rowHides = { 0, 0, 0, 0 }
 local height
 local rows = {}
 local index
+local rowAnchors = { 0, 0, 0, 0 }
 for index = 1, 4 do
     rows[index] = {
         Show = function() rowShows[index] = rowShows[index] + 1 end,
         Hide = function() rowHides[index] = rowHides[index] + 1 end,
+        ClearAllPoints = function() rowAnchors[index] = rowAnchors[index] + 1 end,
+        SetPoint = function() end,
     }
+end
+local function totalAnchors()
+    return rowAnchors[1] + rowAnchors[2] + rowAnchors[3] + rowAnchors[4]
 end
 ParseBuddy.UI.frame = {
     rows = rows,
@@ -237,13 +245,22 @@ assertEqual(height, 42 + (26 + 2) + (18 + 2) + 6, "frame height follows the mix 
 
 local showCountBeforeRepeat = rowShows[1] + rowShows[2] + rowShows[3] + rowShows[4]
 local hideCountBeforeRepeat = rowHides[1] + rowHides[2] + rowHides[3] + rowHides[4]
+local anchorsBeforeRepeat = totalAnchors()
+assertEqual(anchorsBeforeRepeat > 0, true, "the first render anchors the rows it draws")
 ParseBuddy.UI:RenderEvaluations(compactEvaluations, false)
 assertEqual(rowShows[1] + rowShows[2] + rowShows[3] + rowShows[4], showCountBeforeRepeat, "unchanged compact rows are not reshown on ticker refresh")
 assertEqual(rowHides[1] + rowHides[2] + rowHides[3] + rowHides[4], hideCountBeforeRepeat, "unchanged hidden rows are not rehidden on ticker refresh")
+-- The 0.2s ticker may only update timers, colours and visibility. A row that has
+-- not moved must not be reanchored five times a second.
+assertEqual(totalAnchors(), anchorsBeforeRepeat, "unchanged rows are not reanchored on ticker refresh")
+ParseBuddy.UI:RenderEvaluations(compactEvaluations, false)
+assertEqual(totalAnchors(), anchorsBeforeRepeat, "repeated steady-state refreshes touch no layout")
 
 rendered = {}
 ParseBuddyDB.displayMode = "FULL_LIST"
+local anchorsBeforeReflow = totalAnchors()
 assertEqual(ParseBuddy.UI:RenderEvaluations(compactEvaluations, false), 4, "full mode renders every enabled evaluation")
+assertEqual(totalAnchors() > anchorsBeforeReflow, true, "a genuine layout change still reanchors")
 assertEqual(rendered[3].effect, "Healthy Two", "full mode overwrites compact row slots without stale data")
 
 rendered = {}
