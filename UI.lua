@@ -4,8 +4,12 @@ PB.UI = {}
 
 local FRAME_WIDTH = 440
 local HEADER_HEIGHT = 42
-local ROW_HEIGHT = 32
+-- A healthy row is confirmation and gets one compact line. A row reporting a
+-- problem earns a second line for the group and what is missing from it.
+local ROW_HEIGHT = 18
+local ROW_HEIGHT_DETAIL = 26
 local ROW_SPACING = 2
+local ACCENT_WIDTH = 3
 local FRAME_PADDING = 6
 local COLLAPSED_FRAME_HEIGHT = HEADER_HEIGHT + FRAME_PADDING
 local MIN_SCALE = 0.6
@@ -19,13 +23,17 @@ local DISPLAY_MODE_FULL = "FULL_LIST"
 local VISIBILITY_APPLIED = "applied"
 local SCREEN_MARGIN = 40
 
+-- Filling fourteen rows edge to edge is what made the frame fight the game for
+-- attention. The row itself stays dark and the state shows in a left accent.
+local ROW_BACKGROUND = { 0.09, 0.09, 0.11, 0.86 }
+
 local STATE_COLORS = {
-    active = { 0.08, 0.42, 0.12, 0.92 },
-    warning = { 0.48, 0.38, 0.04, 0.92 },
-    missing = { 0.50, 0.07, 0.07, 0.92 },
-    disabled = { 0.20, 0.20, 0.20, 0.92 },
-    grace = { 0.20, 0.20, 0.20, 0.92 },
-    notAvailable = { 0.20, 0.20, 0.20, 0.92 },
+    active = { 0.24, 0.78, 0.34, 1 },
+    warning = { 0.96, 0.74, 0.16, 1 },
+    missing = { 0.90, 0.22, 0.22, 1 },
+    disabled = { 0.42, 0.42, 0.46, 1 },
+    grace = { 0.55, 0.55, 0.60, 1 },
+    notAvailable = { 0.42, 0.42, 0.46, 1 },
 }
 
 local BACKDROP = {
@@ -67,37 +75,54 @@ local function createRow(parent, index)
     local template = BackdropTemplateMixin and "BackdropTemplate" or nil
     local row = CreateFrame("Frame", nil, parent, template)
     row:SetHeight(ROW_HEIGHT)
-    row:SetPoint("TOPLEFT", FRAME_PADDING, -HEADER_HEIGHT - ((index - 1) * (ROW_HEIGHT + ROW_SPACING)))
-    row:SetPoint("TOPRIGHT", -FRAME_PADDING, -HEADER_HEIGHT - ((index - 1) * (ROW_HEIGHT + ROW_SPACING)))
+
+    row.accent = row:CreateTexture(nil, "OVERLAY")
+    row.accent:SetPoint("TOPLEFT", 1, -1)
+    row.accent:SetPoint("BOTTOMLEFT", 1, 1)
+    row.accent:SetWidth(ACCENT_WIDTH)
 
     row.icon = row:CreateTexture(nil, "ARTWORK")
-    row.icon:SetSize(26, 26)
-    row.icon:SetPoint("LEFT", 4, 0)
+    row.icon:SetSize(14, 14)
+    row.icon:SetPoint("LEFT", ACCENT_WIDTH + 6, 0)
     row.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 
-    row.groupText = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    row.groupText:SetPoint("LEFT", row.icon, "RIGHT", 6, 7)
-    row.groupText:SetWidth(180)
+    -- Only drawn on a problem row, where naming the group is the whole point.
+    row.groupText = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    row.groupText:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 6, 1)
+    row.groupText:SetWidth(200)
     row.groupText:SetJustifyH("LEFT")
 
     row.effectText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    row.effectText:SetPoint("LEFT", row.icon, "RIGHT", 6, -7)
-    row.effectText:SetWidth(190)
+    row.effectText:SetPoint("LEFT", row.icon, "RIGHT", 6, 0)
+    row.effectText:SetWidth(200)
     row.effectText:SetJustifyH("LEFT")
 
     row.sourceText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    row.sourceText:SetPoint("LEFT", row, "LEFT", 292, 0)
-    row.sourceText:SetWidth(72)
-    row.sourceText:SetJustifyH("LEFT")
+    row.sourceText:SetPoint("RIGHT", row, "RIGHT", -58, 0)
+    row.sourceText:SetWidth(104)
+    row.sourceText:SetJustifyH("RIGHT")
 
     row.statusText = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     row.statusText:SetPoint("RIGHT", -6, 0)
-    row.statusText:SetWidth(62)
+    row.statusText:SetWidth(50)
     row.statusText:SetJustifyH("RIGHT")
 
-    createBackdrop(row, STATE_COLORS.disabled)
+    createBackdrop(row, ROW_BACKGROUND)
 
     return row
+end
+
+local function rowHeightFor(data)
+    return data and data.detailed and ROW_HEIGHT_DETAIL or ROW_HEIGHT
+end
+
+local function positionRow(row, offset)
+    if not row.ClearAllPoints or not row.SetPoint then
+        return
+    end
+    row:ClearAllPoints()
+    row:SetPoint("TOPLEFT", FRAME_PADDING, -HEADER_HEIGHT - offset)
+    row:SetPoint("TOPRIGHT", -FRAME_PADDING, -HEADER_HEIGHT - offset)
 end
 
 local function setRowVisible(row, visible)
@@ -115,10 +140,29 @@ end
 function PB.UI:ApplyRowData(row, data)
     local color = STATE_COLORS[data.state] or STATE_COLORS.disabled
     if row.displayState ~= data.state then
-        if row.SetBackdropColor then
-            row:SetBackdropColor(color[1], color[2], color[3], color[4])
+        if row.accent and row.accent.SetColorTexture then
+            row.accent:SetColorTexture(color[1], color[2], color[3], color[4])
         end
         row.displayState = data.state
+    end
+
+    local detailed = data.detailed == true
+    if row.detailed ~= detailed then
+        if row.SetHeight then
+            row:SetHeight(detailed and ROW_HEIGHT_DETAIL or ROW_HEIGHT)
+        end
+        if row.groupText and row.groupText.Show and row.groupText.Hide then
+            if detailed then row.groupText:Show() else row.groupText:Hide() end
+        end
+        if row.effectText and row.effectText.ClearAllPoints and row.icon then
+            row.effectText:ClearAllPoints()
+            if detailed then
+                row.effectText:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 6, -11)
+            else
+                row.effectText:SetPoint("LEFT", row.icon, "RIGHT", 6, 0)
+            end
+        end
+        row.detailed = detailed
     end
     if row.iconSpellId ~= data.iconSpellId then
         row.icon:SetTexture(getIcon(data.iconSpellId))
@@ -144,7 +188,7 @@ end
 
 local function formatDuration(remaining)
     local seconds = math.max(0, math.floor((remaining or 0) + 0.5))
-    return string.format("%02d:%02d", math.floor(seconds / 60), seconds % 60)
+    return string.format("%d:%02d", math.floor(seconds / 60), seconds % 60)
 end
 
 local function getDefaultIconSpellId(group)
@@ -160,6 +204,13 @@ function PB.UI:EvaluationToRowData(evaluation)
     local status
     local displayState = state
 
+    -- A row with nothing on the boss has to say which group it is and what would
+    -- satisfy it. A row with a live effect does not: the icon and the effect name
+    -- already carry that, and repeating the group label is what made the frame
+    -- twice as tall as it needed to be.
+    local detailed = state == "disabled" or state == "grace"
+        or state == "missing" or state == "notAvailable"
+
     if state == "disabled" then
         effect = group.missingText
         status = "DISABLED"
@@ -171,7 +222,7 @@ function PB.UI:EvaluationToRowData(evaluation)
         status = "MISSING"
     elseif state == "notAvailable" then
         effect = group.missingText .. " unavailable"
-        status = "NOT AVAILABLE"
+        status = "N/A"
     else
         effect = spell.displayName
         if spell.requiredStacks then
@@ -186,11 +237,12 @@ function PB.UI:EvaluationToRowData(evaluation)
 
     return {
         iconSpellId = candidate and candidate.spellId or getDefaultIconSpellId(group),
-        group = group.label,
+        group = detailed and group.label or "",
         effect = effect,
         source = candidate and candidate.sourceName or "",
         status = status,
         state = displayState,
+        detailed = detailed,
     }
 end
 
@@ -203,6 +255,7 @@ function PB.UI:CreateFrame()
     local frame = CreateFrame("Frame", "ParseBuddyFrame", UIParent, template)
     local rowCount = #PB.DebuffLibrary.groups
     frame:SetSize(FRAME_WIDTH, HEADER_HEIGHT + (rowCount * (ROW_HEIGHT + ROW_SPACING)) + FRAME_PADDING)
+    frame.rowCount = rowCount
     frame:SetClampedToScreen(true)
     frame:SetMovable(true)
     frame:EnableMouse(true)
@@ -346,14 +399,17 @@ end
 -- shrinks a frame that is taller than the screen. Work out how many rows can
 -- actually be drawn at the frame's current scale so a long list degrades into an
 -- overflow row instead of running off the display.
-function PB.UI:GetMaxRenderableRows(frame)
-    local rowCapacity = #frame.rows
+-- Rows now vary in height, so the screen limit is a pixel budget rather than a
+-- row count. Nothing about SetClampedToScreen shrinks a frame taller than the
+-- display, so work out what actually fits at the frame's current scale.
+function PB.UI:GetRowHeightBudget(frame)
+    local capacity = #frame.rows * (ROW_HEIGHT_DETAIL + ROW_SPACING)
     if not UIParent or not UIParent.GetHeight then
-        return rowCapacity
+        return capacity
     end
     local ok, screenHeight = pcall(function() return UIParent:GetHeight() end)
     if not ok or type(screenHeight) ~= "number" or screenHeight <= 0 then
-        return rowCapacity
+        return capacity
     end
     local scale = 1
     if frame.GetScale then
@@ -364,64 +420,84 @@ function PB.UI:GetMaxRenderableRows(frame)
         end
     end
     local usable = (screenHeight / scale) - HEADER_HEIGHT - FRAME_PADDING - SCREEN_MARGIN
-    local fits = math.floor(usable / (ROW_HEIGHT + ROW_SPACING))
-    if fits < 1 then
-        fits = 1
+    if usable < ROW_HEIGHT + ROW_SPACING then
+        usable = ROW_HEIGHT + ROW_SPACING
     end
-    if fits > rowCapacity then
-        fits = rowCapacity
+    if usable > capacity then
+        usable = capacity
     end
-    return fits
+    return usable
 end
 
 function PB.UI:RenderEvaluations(evaluations, showAll)
     local frame = self:CreateFrame()
     local displayMode = PB.Config and PB.Config:GetDisplayMode() or ParseBuddyDB.displayMode
     local showUnavailable = PB.Config and PB.Config:GetShowUnavailable() or false
-    local visibleCount = 0
     local index
 
-    local selected = {}
+    local rows = {}
     for index = 1, #(evaluations or {}) do
         local evaluation = evaluations[index]
         if showAll or self:IsEvaluationVisible(evaluation, displayMode, showUnavailable) then
-            selected[#selected + 1] = evaluation
+            rows[#rows + 1] = self:EvaluationToRowData(evaluation)
         end
     end
 
-    local maxRows = self:GetMaxRenderableRows(frame)
-    local drawn = #selected
-    local hidden = 0
-    if drawn > maxRows then
-        -- Spend the last usable row on the count rather than dropping rows silently.
-        hidden = drawn - (maxRows - 1)
-        drawn = maxRows - 1
+    local budget = self:GetRowHeightBudget(frame)
+    local overflowHeight = ROW_HEIGHT + ROW_SPACING
+    local used = 0
+    local drawn = 0
+    for index = 1, #rows do
+        local height = rowHeightFor(rows[index]) + ROW_SPACING
+        -- Keep room for the overflow row whenever more rows would follow.
+        local reserve = index < #rows and overflowHeight or 0
+        if drawn >= #frame.rows or used + height + reserve > budget then
+            break
+        end
+        used = used + height
+        drawn = drawn + 1
     end
 
+    local hidden = #rows - drawn
+    if hidden > 0 and drawn >= #frame.rows then
+        -- Spend the last row slot on the count rather than dropping rows silently.
+        drawn = drawn - 1
+        hidden = #rows - drawn
+    end
+
+    local visibleCount = 0
+    local offset = 0
     for index = 1, drawn do
         visibleCount = visibleCount + 1
-        self:ApplyRowData(frame.rows[visibleCount], self:EvaluationToRowData(selected[index]))
-        setRowVisible(frame.rows[visibleCount], true)
+        local row = frame.rows[visibleCount]
+        self:ApplyRowData(row, rows[index])
+        positionRow(row, offset)
+        offset = offset + rowHeightFor(rows[index]) + ROW_SPACING
+        setRowVisible(row, true)
     end
 
     if hidden > 0 then
         visibleCount = visibleCount + 1
-        self:ApplyRowData(frame.rows[visibleCount], {
+        local row = frame.rows[visibleCount]
+        self:ApplyRowData(row, {
             iconSpellId = nil,
             group = "",
             effect = string.format("%d more row%s do not fit on screen", hidden, hidden == 1 and "" or "s"),
             source = "",
             status = "",
             state = "disabled",
+            detailed = false,
         })
-        setRowVisible(frame.rows[visibleCount], true)
+        positionRow(row, offset)
+        offset = offset + ROW_HEIGHT + ROW_SPACING
+        setRowVisible(row, true)
     end
 
     for index = visibleCount + 1, #frame.rows do
         setRowVisible(frame.rows[index], false)
     end
 
-    frame:SetHeight(HEADER_HEIGHT + (visibleCount * (ROW_HEIGHT + ROW_SPACING)) + FRAME_PADDING)
+    frame:SetHeight(HEADER_HEIGHT + offset + FRAME_PADDING)
     return visibleCount
 end
 

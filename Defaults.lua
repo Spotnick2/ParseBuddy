@@ -16,7 +16,7 @@ PB.Defaults = {
         },
         selectedProfile = "Default",
         displayMode = "PROBLEMS_ONLY",
-        warningThreshold = 5,
+        warningCapSeconds = 10,
         pullGracePeriod = 6,
         showUnknownSource = true,
     },

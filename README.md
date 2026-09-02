@@ -125,8 +125,10 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 - Frame lock, scale, opacity, and reset update account-wide frame settings immediately.
 - Alert destination/delay/test controls visibly disable while alerts are off, and Diagnostics starts collapsed.
 - Selected scope/mode/destination choices are visually distinct from unselected choices. Scale, opacity, and delay sliders show a track, fill, thumb, and numeric value.
-- Group rows are compact and aligned. The Show control selects Off, If applied, or Always; the Alert checkbox applies only to Always groups and is disabled otherwise. Availability is green, gray, or yellow for Available, Not Available, or Unknown.
-- `/pb test` shows eighteen deterministic rows covering every monitored group: green active, yellow expiring and partial, red missing, and one gray `NOT AVAILABLE` example. Test mode is deliberately unfiltered, so applied-only groups appear here even when missing, which they never do during an encounter.
+- Live rows are single-line when the effect is present: a coloured left accent on a dark row, then icon, effect name, source, and remaining time. A row reporting a problem takes a second line for the group and what would satisfy it, so problems are taller and more visible than confirmations. Timers read `3:57`.
+- Warning colour scales with the effect's own duration, at a quarter of it, floored at 3 seconds and capped at 10. A 7-second Expose Weakness warns at 3 seconds; a 300-second Curse of the Elements warns at 10. A fixed window cannot serve both.
+- Group rows in the settings panel are compact and aligned. The Show control selects Off, If applied, or Always; the Alert checkbox applies only to Always groups and is disabled otherwise. Availability is green, gray, or yellow for Available, Not Available, or Unknown.
+- `/pb test` shows eighteen deterministic rows covering every monitored group: green active, yellow expiring and partial, red missing, and one gray `N/A` example. Test mode is deliberately unfiltered, so applied-only groups appear here even when missing, which they never do during an encounter.
 - The frame can be dragged while unlocked.
 - The title-bar lock icon changes between locked and unlocked images and toggles dragging; `/pb lock` and `/pb unlock` provide the same behavior.
 - Frame position and lock state persist after `/reload`.
@@ -182,7 +184,7 @@ Milestones 4 through 6 add encounter lifecycle, boss tracking, CLEU-driven live 
 Run these checks after `/reload` with Lua errors enabled:
 
 1. Run `/pb validate`. Record any missing IDs; expected client-specific failures must be investigated before the row is trusted.
-2. Run `/pb test` in both saved display modes. Verify all eighteen deterministic rows remain visible because test mode deliberately bypasses live filtering, including the gray `NOT AVAILABLE` example and the missing applied-only rows. If the frame cannot fit every row at the current scale, the last row reports how many did not fit; that is expected, not a failure.
+2. Run `/pb test` in both saved display modes. Verify all eighteen deterministic rows remain visible because test mode deliberately bypasses live filtering, including the gray `N/A` example and the missing applied-only rows. If the frame cannot fit every row at the current scale, the last row reports how many did not fit; that is expected, not a failure.
 3. Verify unlock, drag, lock, scale, `/pb reset`, and persistence across another `/reload`.
 4. Run `/pb profile`, `/pb groups`, and `/pb group recklessness`. Verify the default is global and Recklessness reports enabled, show if applied, optional.
 5. Set a distinctive global mode/group combination, switch to personal, and verify it was copied. Change the personal settings, switch back to global, and confirm the global values were preserved. Reload and verify the selected scope and both settings stores persist.

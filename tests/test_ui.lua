@@ -51,10 +51,13 @@ local function textTarget(key)
         SetText = function()
             calls[key] = calls[key] + 1
         end,
+        Show = function() end,
+        Hide = function() end,
     }
 end
 local row = {
-    SetBackdropColor = function() calls.color = calls.color + 1 end,
+    SetHeight = function(_, value) calls.height = value end,
+    accent = { SetColorTexture = function() calls.color = calls.color + 1 end },
     icon = { SetTexture = function() calls.icon = calls.icon + 1 end },
     groupText = textTarget("group"),
     effectText = textTarget("effect"),
@@ -71,7 +74,8 @@ local data = {
 }
 ParseBuddy.UI:ApplyRowData(row, data)
 ParseBuddy.UI:ApplyRowData(row, data)
-assertEqual(calls.color, 1, "unchanged row color is not redrawn")
+assertEqual(calls.color, 1, "unchanged row accent is not redrawn")
+assertEqual(calls.height, 18, "a healthy row draws on one compact line")
 assertEqual(calls.icon, 1, "unchanged row icon is not redrawn")
 assertEqual(calls.group, 1, "unchanged group text is not redrawn")
 assertEqual(calls.effect, 1, "unchanged effect text is not redrawn")
@@ -181,8 +185,17 @@ assertEqual(IS_VISIBLE(ParseBuddy.UI, disabledApplied, "FULL_LIST", true), false
     "disabled still wins over applied-only visibility")
 
 local unavailableRow = ParseBuddy.UI:EvaluationToRowData(evaluation("notAvailable", true, false, "Unavailable"))
-assertEqual(unavailableRow.status, "NOT AVAILABLE", "unavailable evaluation uses explicit status")
+assertEqual(unavailableRow.status, "N/A", "unavailable evaluation uses explicit status")
 assertEqual(unavailableRow.state, "notAvailable", "unavailable evaluation uses gray display state")
+assertEqual(unavailableRow.detailed, true, "a row with nothing on the boss earns the detail line")
+assertEqual(unavailableRow.group, "Unavailable", "a detail row names its group")
+
+-- A healthy row drops the group label: the icon and effect name already say it,
+-- and repeating it is what doubled the frame height.
+local healthyRow = ParseBuddy.UI:EvaluationToRowData(evaluation("active", true, true, "Healthy"))
+assertEqual(healthyRow.detailed, false, "a healthy row stays on one compact line")
+assertEqual(healthyRow.group, "", "a healthy row does not repeat the group label")
+assertEqual(healthyRow.effect, "Healthy", "a healthy row leads with the effect name")
 
 local rendered = {}
 local rowShows = { 0, 0, 0, 0 }
@@ -201,7 +214,7 @@ ParseBuddy.UI.frame = {
     SetHeight = function(_, value) height = value end,
 }
 ParseBuddy.UI.ApplyRowData = function(_, targetRow, rowData)
-    rendered[#rendered + 1] = { row = targetRow, group = rowData.group, effect = rowData.effect, state = rowData.state }
+    rendered[#rendered + 1] = { row = targetRow, group = rowData.group, effect = rowData.effect, state = rowData.state, detailed = rowData.detailed }
 end
 ParseBuddyDB.displayMode = "PROBLEMS_ONLY"
 ParseBuddyDB.showUnavailable = false
@@ -212,13 +225,15 @@ local compactEvaluations = {
     evaluation("expiring", true, true, "Expiring"),
 }
 assertEqual(ParseBuddy.UI:RenderEvaluations(compactEvaluations, false), 2, "problems mode compacts visible rows")
-assertEqual(rendered[1].group, "Missing", "first compact slot receives first problem")
-assertEqual(rendered[2].group, "Expiring", "second compact slot receives later problem")
+assertEqual(rendered[1].effect, "Missing missing", "first compact slot receives first problem")
+assertEqual(rendered[2].effect, "Expiring", "second compact slot receives later problem")
 assertEqual(rowShows[1], 1, "first compact row shown")
 assertEqual(rowShows[2], 1, "second compact row shown")
 assertEqual(rowShows[3], 0, "unused stale row remains hidden")
 assertEqual(rowHides[4], 1, "all row slots are hidden before compaction")
-assertEqual(height, 116, "frame height matches two compact rows")
+-- One detail row (26) and one compact row (18), each plus 2 spacing, under a
+-- 42 header and 6 padding.
+assertEqual(height, 42 + (26 + 2) + (18 + 2) + 6, "frame height follows the mix of row heights")
 
 local showCountBeforeRepeat = rowShows[1] + rowShows[2] + rowShows[3] + rowShows[4]
 local hideCountBeforeRepeat = rowHides[1] + rowHides[2] + rowHides[3] + rowHides[4]
@@ -229,7 +244,7 @@ assertEqual(rowHides[1] + rowHides[2] + rowHides[3] + rowHides[4], hideCountBefo
 rendered = {}
 ParseBuddyDB.displayMode = "FULL_LIST"
 assertEqual(ParseBuddy.UI:RenderEvaluations(compactEvaluations, false), 4, "full mode renders every enabled evaluation")
-assertEqual(rendered[3].group, "Healthy Two", "full mode overwrites compact row slots without stale data")
+assertEqual(rendered[3].effect, "Healthy Two", "full mode overwrites compact row slots without stale data")
 
 rendered = {}
 ParseBuddyDB.displayMode = "PROBLEMS_ONLY"
@@ -238,26 +253,29 @@ assertEqual(ParseBuddy.UI:RenderEvaluations(compactEvaluations, true), 4, "test 
 -- A row pool taller than the screen must degrade into a count, not run off the
 -- display. Test mode stays unfiltered: every evaluation is still selected, the
 -- last usable row just reports the ones that do not physically fit.
-local realMaxRows = ParseBuddy.UI.GetMaxRenderableRows
-ParseBuddy.UI.GetMaxRenderableRows = function() return 3 end
+local realBudget = ParseBuddy.UI.GetRowHeightBudget
+-- Healthy One (18+2) + Missing (26+2) leaves no room for a third row plus the
+-- overflow row, so the third slot reports the remainder.
+ParseBuddy.UI.GetRowHeightBudget = function() return 20 + 28 + 20 end
 rendered = {}
 assertEqual(ParseBuddy.UI:RenderEvaluations(compactEvaluations, true), 3, "render stops at the rows that fit on screen")
-assertEqual(rendered[1].group, "Healthy One", "clamped render keeps the first rows")
-assertEqual(rendered[2].group, "Missing", "clamped render keeps rows in order")
+assertEqual(rendered[1].effect, "Healthy One", "clamped render keeps the first rows")
+assertEqual(rendered[2].effect, "Missing missing", "clamped render keeps rows in order")
 assertEqual(rendered[3].effect, "2 more rows do not fit on screen", "final row reports the overflow count")
 assertEqual(rendered[3].state, "disabled", "overflow row uses the muted display state")
-assertEqual(height, 42 + (3 * 34) + 6, "clamped frame height covers only the drawn rows")
+assertEqual(rendered[3].detailed, false, "the overflow row stays compact")
+assertEqual(height, 42 + 20 + 28 + 20 + 6, "clamped frame height covers only the drawn rows")
 
-ParseBuddy.UI.GetMaxRenderableRows = function() return 2 end
+ParseBuddy.UI.GetRowHeightBudget = function() return 20 + 20 end
 rendered = {}
-ParseBuddy.UI:RenderEvaluations({ compactEvaluations[1], compactEvaluations[2], compactEvaluations[3] }, true)
+ParseBuddy.UI:RenderEvaluations({ compactEvaluations[1], compactEvaluations[3], compactEvaluations[4] }, true)
 assertEqual(rendered[2].effect, "2 more rows do not fit on screen", "overflow count excludes the row it occupies")
 
-ParseBuddy.UI.GetMaxRenderableRows = function() return 4 end
+ParseBuddy.UI.GetRowHeightBudget = function() return 1000 end
 rendered = {}
 assertEqual(ParseBuddy.UI:RenderEvaluations(compactEvaluations, true), 4, "no overflow row when everything fits")
-assertEqual(rendered[4].group, "Expiring", "final evaluation drawn when it fits")
-ParseBuddy.UI.GetMaxRenderableRows = realMaxRows
+assertEqual(rendered[4].effect, "Expiring", "final evaluation drawn when it fits")
+ParseBuddy.UI.GetRowHeightBudget = realBudget
 
 local refreshes = 0
 ParseBuddy.Encounter.active = true

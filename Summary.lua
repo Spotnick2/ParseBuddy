@@ -105,7 +105,7 @@ function PB.Summary:Observe(now, bossGUID)
     local evaluations = PB.State:EvaluateBoss(
         bossGUID,
         now,
-        ParseBuddyDB.warningThreshold,
+        ParseBuddyDB.warningCapSeconds,
         false,
         active.settings.groups
     )

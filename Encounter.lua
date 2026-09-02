@@ -219,7 +219,7 @@ function PB.Encounter:RecordMeaningfulLiveState(now, evaluations)
     evaluations = evaluations or PB.State:EvaluateBoss(
         self.primaryVisibleBoss.guid,
         now,
-        ParseBuddyDB.warningThreshold,
+        ParseBuddyDB.warningCapSeconds,
         self:IsGraceActive(now)
     )
 
@@ -739,7 +739,7 @@ function PB.Encounter:RefreshDisplay(recordSummary)
         evaluations = PB.State:EvaluateBoss(
             boss.guid,
             now,
-            ParseBuddyDB.warningThreshold,
+            ParseBuddyDB.warningCapSeconds,
             self:IsGraceActive(now)
         )
         if expired then
@@ -924,7 +924,7 @@ function PB.Encounter:BuildDumpLines(options)
         local evaluations = PB.State:EvaluateBoss(
             self.primaryVisibleBoss.guid,
             now,
-            ParseBuddyDB.warningThreshold,
+            ParseBuddyDB.warningCapSeconds,
             self:IsGraceActive(now)
         )
         local evaluationLines = self:BuildEvaluationLines(evaluations)
